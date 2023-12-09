@@ -1,5 +1,6 @@
 mod config;
 mod routers;
+
 use axum::{
     body::Bytes,
     extract::MatchedPath,
@@ -30,56 +31,56 @@ pub async fn main() -> AnyResult {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
+    // `TraceLayer` is provided by tower-http so you have to add that as a dependency.
+    // It provides good defaults but is also very customizable.
+    //
+    // See https://docs.rs/tower-http/latest/tower_http/trace/index.html for more details.
+    //
+    // If you want to customize the behavior using closures here is how.
+    let tracer = TraceLayer::new_for_http()
+        .make_span_with(|request: &Request<_>| {
+            // Log the matched route's path (with placeholders not filled in).
+            // Use request.uri() or OriginalUri if you want the real path.
+            let matched_path = request
+                .extensions()
+                .get::<MatchedPath>()
+                .map(MatchedPath::as_str);
+
+            info_span!(
+                "http_request",
+                method = ?request.method(),
+                matched_path,
+                some_other_field = tracing::field::Empty,
+            )
+        })
+        .on_request(|_request: &Request<_>, _span: &Span| {
+            // You can use `_span.record("some_other_field", value)` in one of these
+            // closures to attach a value to the initially empty field in the info_span
+            // created above.
+        })
+        .on_response(|_response: &Response, _latency: Duration, _span: &Span| {
+            // ...
+        })
+        .on_body_chunk(|_chunk: &Bytes, _latency: Duration, _span: &Span| {
+            // ...
+        })
+        .on_eos(
+            |_trailers: Option<&HeaderMap>, _stream_duration: Duration, _span: &Span| {
+                // ...
+            },
+        )
+        .on_failure(
+            |_error: ServerErrorsFailureClass, _latency: Duration, _span: &Span| {
+                // ...
+            },
+        );
+
     // Build our application by creating our router.
     let app = axum::Router::new()
         .fallback(fallback)
         .route("/", get(hello))
         .route("/user_auth", get(user_auth))
-        // `TraceLayer` is provided by tower-http so you have to add that as a dependency.
-        // It provides good defaults but is also very customizable.
-        //
-        // See https://docs.rs/tower-http/0.1.1/tower_http/trace/index.html for more details.
-        //
-        // If you want to customize the behavior using closures here is how.
-        .layer(
-            TraceLayer::new_for_http()
-                .make_span_with(|request: &Request<_>| {
-                    // Log the matched route's path (with placeholders not filled in).
-                    // Use request.uri() or OriginalUri if you want the real path.
-                    let matched_path = request
-                        .extensions()
-                        .get::<MatchedPath>()
-                        .map(MatchedPath::as_str);
-
-                    info_span!(
-                        "http_request",
-                        method = ?request.method(),
-                        matched_path,
-                        some_other_field = tracing::field::Empty,
-                    )
-                })
-                .on_request(|_request: &Request<_>, _span: &Span| {
-                    // You can use `_span.record("some_other_field", value)` in one of these
-                    // closures to attach a value to the initially empty field in the info_span
-                    // created above.
-                })
-                .on_response(|_response: &Response, _latency: Duration, _span: &Span| {
-                    // ...
-                })
-                .on_body_chunk(|_chunk: &Bytes, _latency: Duration, _span: &Span| {
-                    // ...
-                })
-                .on_eos(
-                    |_trailers: Option<&HeaderMap>, _stream_duration: Duration, _span: &Span| {
-                        // ...
-                    },
-                )
-                .on_failure(
-                    |_error: ServerErrorsFailureClass, _latency: Duration, _span: &Span| {
-                        // ...
-                    },
-                ),
-        );
+        .layer(tracer);
 
     // Run our application as a hyper server on http://localhost:8787.
     let listener =
