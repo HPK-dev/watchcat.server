@@ -1,4 +1,3 @@
-mod user_auth;
-mod user_reg;
+pub mod user_reg;
+pub mod user_auth;
 
-pub use user_auth::main as user_auth;

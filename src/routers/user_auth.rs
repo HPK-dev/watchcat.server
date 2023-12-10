@@ -1,26 +1,31 @@
-use axum::{extract::Query, http::StatusCode, response::IntoResponse};
-use std::collections::HashMap;
+use tracing::{instrument, Level};
+
+use actix_web::{get, web, Either, HttpResponse};
+use serde::Deserialize;
+
+#[derive(Deserialize, Debug)]
+struct Info {
+    card_id: String,
+}
 
 type AnyResult<T = ()> = anyhow::Result<T>;
+type RegisterResult = Either<HttpResponse, String>;
 
-pub async fn main(Query(params): Query<HashMap<String, String>>) -> impl IntoResponse {
-    match params.get("cid").take() {
-        Some(v) => {
-            let user_id = get_user_id(v);
+#[instrument(level = Level::DEBUG)]
+#[get("/user_auth")]
+pub async fn main(info: web::Query<Info>) -> RegisterResult {
+    let user_id = get_user_id(&info.card_id);
 
-            match user_id {
-                Ok(v) => (StatusCode::OK, v),
+    match user_id {
+        Ok(v) => Either::Right(v),
 
-                Err(e) => (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "Unknow error".to_string(),
-                ),
-            }
+        Err(e) => {
+            tracing::error!("{:?}", e);
+            Either::Left(
+                HttpResponse::InternalServerError()
+                .body("Something went wrong! The error has been log. Please contact with server administrator.")
+            )
         }
-        None => (
-            StatusCode::BAD_REQUEST,
-            "Required card id not found".to_string(),
-        ),
     }
 }
 
