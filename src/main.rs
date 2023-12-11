@@ -1,12 +1,13 @@
-mod config;
 mod routers;
 use actix_web::body::MessageBody;
 use actix_web::dev::{ServiceRequest, ServiceResponse};
 use actix_web::web;
 use actix_web::Error;
 use actix_web::{get, App, HttpServer};
-use routers::user_auth;
+use dotenv::dotenv;
+use routers::{token_login, user_auth, user_login};
 use serde::Deserialize;
+use std::env;
 use tracing::Span;
 use tracing_actix_web::{RootSpanBuilder, TracingLogger};
 type AnyResult<T = ()> = anyhow::Result<T>;
@@ -37,8 +38,24 @@ impl RootSpanBuilder for CustomRootSpanBuilder {
     }
 }
 
+fn check_needed_env() -> AnyResult {
+    env::var("bind_ip")?;
+    env::var("bind_port")?;
+    env::var("google_oauth_key")?;
+    env::var("google_oauth_id")?;
+
+    Ok(())
+}
+
 #[actix_web::main]
 pub async fn main() -> AnyResult {
+    dotenv().ok();
+
+    check_needed_env()?;
+
+    let bind_ip = env::var("bind_ip")?;
+    let bind_port = env::var("bind_port")?;
+
     // tracing_subscriber::registry()
     //     .with(
     //         tracing_subscriber::EnvFilter::try_from_default_env()
@@ -54,8 +71,10 @@ pub async fn main() -> AnyResult {
             // routers
             .service(hello)
             .service(user_auth::main)
+            .service(token_login::main)
+            .service(user_login::main)
     })
-    .bind((config::IP, config::PORT))?;
+    .bind(format!("{}:{}", bind_ip, bind_port))?;
     server.run().await?;
 
     Ok(())
