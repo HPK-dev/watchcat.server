@@ -1,11 +1,7 @@
-use tracing::{instrument, Level};
-use std::env;
 use actix_web::{get, http::StatusCode, web, Either, HttpResponse};
 use serde::Deserialize;
-
-type AnyResult<T = ()> = anyhow::Result<T>;
-
-
+use std::env;
+use tracing::{instrument, Level};
 
 #[instrument(level = Level::DEBUG)]
 #[get("/user_login")]
