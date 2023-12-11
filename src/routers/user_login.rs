@@ -1,5 +1,4 @@
-use actix_web::{get, http::StatusCode, web, Either, HttpResponse};
-use serde::Deserialize;
+use actix_web::{get, http::StatusCode, HttpResponse};
 use std::env;
 use tracing::{instrument, Level};
 

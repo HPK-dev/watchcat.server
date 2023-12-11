@@ -67,7 +67,7 @@ pub async fn main() -> AnyResult {
     let server = HttpServer::new(|| {
         App::new()
             // middleware
-            .wrap(TracingLogger::<CustomRootSpanBuilder>::new())
+            .wrap(TracingLogger::default())
             // routers
             .service(hello)
             .service(user_auth::main)
