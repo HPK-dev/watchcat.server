@@ -1,3 +1,4 @@
+mod database;
 mod routers;
 use actix_web::body::MessageBody;
 use actix_web::dev::{ServiceRequest, ServiceResponse};
@@ -7,9 +8,12 @@ use actix_web::{get, App, HttpServer};
 use dotenv::dotenv;
 use routers::{token_login, user_auth, user_login};
 use serde::Deserialize;
+
+use crate::database::AppData;
 use std::env;
 use tracing::Span;
 use tracing_actix_web::{RootSpanBuilder, TracingLogger};
+
 type AnyResult<T = ()> = anyhow::Result<T>;
 
 /// We will define a custom root span builder to capture additional fields, specific
@@ -38,11 +42,17 @@ impl RootSpanBuilder for CustomRootSpanBuilder {
     }
 }
 
+const REQUIRED_ENV_FIELD: [&str; 4] = [
+    "bind_ip",
+    "bind_port",
+    "google_oauth_key",
+    "google_oauth_id",
+];
+
 fn check_needed_env() -> AnyResult {
-    env::var("bind_ip")?;
-    env::var("bind_port")?;
-    env::var("google_oauth_key")?;
-    env::var("google_oauth_id")?;
+    for f in REQUIRED_ENV_FIELD {
+        env::var(f).expect(&format!("Required env variable `{}` is missing!", f));
+    }
 
     Ok(())
 }
@@ -73,6 +83,8 @@ pub async fn main() -> AnyResult {
             .service(user_auth::main)
             .service(token_login::main)
             .service(user_login::main)
+            // App data
+            .app_data(web::Data::new(AppData::new()))
     })
     .bind(format!("{}:{}", bind_ip, bind_port))?;
     server.run().await?;
