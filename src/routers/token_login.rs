@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::str::FromStr;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use actix_web::{post, web, Either, HttpRequest, HttpResponse};
 use anyhow::anyhow;
@@ -58,8 +59,23 @@ pub async fn main(
         return RegisterResult::Left(HttpResponse::BadRequest().body("Unknown JWT issuer!"));
     }
 
+    if !payload.get("exp").is_some_and(|exp| {
+        let exp_u64: u64 = match exp {
+            Value::String(val) => val.parse().unwrap_or(0),
+            _ => 0,
+        };
 
-    println!("{:?}",payload);
+        let exp_time = Duration::from_secs(exp_u64);
+        let since_the_epoch = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("Time went backwards");
+
+        exp_time > since_the_epoch
+    }) {
+        return RegisterResult::Left(HttpResponse::BadRequest().body("Expired token"));
+    }
+
+    println!("{:?}", payload);
 
     // TODO: Add the unsigned user
 
@@ -67,6 +83,20 @@ pub async fn main(
     RegisterResult::Left(HttpResponse::Ok().into())
 }
 
+struct JwtCert {
+    exp: Duration,
+}
+
+impl JwtCert {
+    fn refresh(&mut self) {
+        let start = SystemTime::now();
+        let since_the_epoch = start
+            .duration_since(UNIX_EPOCH)
+            .expect("Time went backwards");
+
+        self.exp = since_the_epoch;
+    }
+}
 
 async fn jwt_decoder(token: &String) -> AnyResult<TokenData<HashMap<String, Value>>> {
     //////////////////////////////////////////////////////////////////////////
