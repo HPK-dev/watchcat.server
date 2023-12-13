@@ -9,6 +9,6 @@ pub async fn main() -> HttpResponse {
         .content_type("text/html; charset=utf-8")
         .body(format!(
             include_str!("./../../static/login.html"),
-            env::var("google_oauth_id").unwrap()
+            env::var("GOOGLE_OAUTH_ID").unwrap()
         ))
 }

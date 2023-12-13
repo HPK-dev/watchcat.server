@@ -1,16 +1,19 @@
-use std::collections::HashMap;
-use std::str::FromStr;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
-
-use actix_web::{post, web, Either, HttpRequest, HttpResponse};
+use crate::database::{AppData, User};
+use actix_web::{post, web, HttpRequest, HttpResponse};
 use anyhow::anyhow;
+use futures_util::TryStreamExt;
 use jsonwebtoken::jwk::AlgorithmParameters;
 use jsonwebtoken::{decode, decode_header, jwk, Algorithm, DecodingKey, TokenData, Validation};
+use regex::Regex;
+use serde::de::value::MapDeserializer;
 use serde::Deserialize;
 use serde_json::Value;
+use sqlx::Sqlite;
+use std::collections::HashMap;
+use std::error::Error;
+use std::str::FromStr;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tracing::{instrument, Level};
-
-use crate::database::AppData;
 
 #[derive(Deserialize, Debug)]
 pub struct GoogleUser {
@@ -19,22 +22,20 @@ pub struct GoogleUser {
 }
 type AnyResult<T = ()> = anyhow::Result<T>;
 
-type RegisterResult = Either<HttpResponse, String>;
-
 #[instrument(level = Level::DEBUG)]
 #[post("/token_login")]
 pub async fn main(
     req: HttpRequest,
     item: web::Form<GoogleUser>,
     data: web::Data<AppData>,
-) -> RegisterResult {
+) -> Result<HttpResponse, Box<dyn Error>> {
     // Obtain required data
     let cookie_token = req.cookie("g_csrf_token");
     let post_request_token = &item.g_csrf_token;
 
     // Check if post-request token and cookie token are met.
     if cookie_token.is_none() || cookie_token.unwrap().value() != post_request_token {
-        return RegisterResult::Left(HttpResponse::BadRequest().body("Failed to verify user."));
+        return Ok(HttpResponse::BadRequest().body("Failed to verify user."));
     }
 
     // Get the encoded JWT
@@ -44,43 +45,52 @@ pub async fn main(
     let decoded_cred = match jwt_decoder(token).await {
         Err(e) => {
             println!("{:?}", e);
-            return RegisterResult::Left(HttpResponse::InternalServerError().into());
+            return Ok(HttpResponse::InternalServerError().into());
         }
         Ok(val) => val,
     };
 
-    let payload = decoded_cred.claims;
+    // Deserialize the Hashmap to `JwtToken`
+    let payload = JwtToken::deserialize(MapDeserializer::new(decoded_cred.claims.into_iter()))?;
 
     // If the JWT is not issued by Google, should the token be considered as forged by others? 🤔
-    if !payload
-        .get("iss")
-        .is_some_and(|iss| iss == "accounts.google.com" || iss == "https://accounts.google.com")
+    let iss = &payload.iss;
+    if iss == "accounts.google.com" || iss == "https://accounts.google.com" {
+        println!("Unknown JWT issuer! {:?}", iss);
+        return Ok(HttpResponse::BadRequest().body("Invalid token."));
+    }
+
+    // Update user sub
+    let rows = sqlx::query_as::<Sqlite, User>("SELECT id, email from user")
+        .fetch_all(&data.db_conn)
+        .await?;
+
+    let sub = &payload.sub;
+    let email = &payload.email;
+
+    // IMPORTANT: Ensure `sub` and `email` both does not contain ANY specical characters.
+    if Regex::new(r"[^a-zA-Z0-9]")?.is_match(&sub)
+        || Regex::new(r"[^a-zA-Z0-9@._]")?.is_match(&email)
     {
-        return RegisterResult::Left(HttpResponse::BadRequest().body("Unknown JWT issuer!"));
+        println!("Suspicious values.");
+        println!("payload: {:?}", payload);
+        return Ok(HttpResponse::BadRequest().body("Invalid token."));
     }
 
-    if !payload.get("exp").is_some_and(|exp| {
-        let exp_u64: u64 = match exp {
-            Value::String(val) => val.parse().unwrap_or(0),
-            _ => 0,
-        };
+    let filted_users: Vec<User> = rows.into_iter().filter(|v| v.id == *sub).collect();
 
-        let exp_time = Duration::from_secs(exp_u64);
-        let since_the_epoch = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("Time went backwards");
-
-        exp_time > since_the_epoch
-    }) {
-        return RegisterResult::Left(HttpResponse::BadRequest().body("Expired token"));
+    // This user doesn't register yet
+    if filted_users.len() == 0 {
+        let result = sqlx::query("INSERT INTO user (id, email) VALUES ($1, $2)")
+            .bind(sub)
+            .bind(email)
+            .execute(&data.db_conn)
+            .await?;
     }
-
-    println!("{:?}", payload);
-
-    // TODO: Add the unsigned user
 
     // TODO: This should return a redirect response
-    RegisterResult::Left(HttpResponse::Ok().into())
+    //       wait a front-end impl
+    Ok(HttpResponse::Ok().into())
 }
 
 struct JwtCert {
@@ -96,6 +106,25 @@ impl JwtCert {
 
         self.exp = since_the_epoch;
     }
+}
+
+#[derive(Deserialize, Debug)]
+struct JwtToken {
+    iss: String, // The JWT's issuer
+    nbf: u64,
+    aud: String,          // Your server's client ID
+    sub: String,          // The unique ID of the user's Google Account
+    hd: Option<String>,   // If present, the host domain of the user's GSuite email address
+    email: String,        // The user's email address
+    email_verified: bool, // true, if Google has verified the email address
+    azp: String,
+    name: String,
+    picture: Option<String>, // If present, a URL to user's profile picture
+    given_name: String,
+    family_name: String,
+    iat: u64, // Unix timestamp of the assertion's creation time
+    exp: u64, // Unix timestamp of the assertion's expiration time
+    jti: String,
 }
 
 async fn jwt_decoder(token: &String) -> AnyResult<TokenData<HashMap<String, Value>>> {

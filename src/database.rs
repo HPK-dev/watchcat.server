@@ -1,43 +1,39 @@
+use serde::Deserialize;
 use sqlx::sqlite::SqlitePoolOptions;
 use sqlx::Sqlite;
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
+
+type AM<T> = Arc<Mutex<T>>;
+type AnyResult<T = ()> = anyhow::Result<T>;
 
 #[derive(Debug)]
 pub struct AppData {
-    registering_pool: Mutex<Vec<HashMap<String, String>>>,
+    pub registering_pool: AM<Vec<HashMap<String, String>>>,
+    pub db_conn: sqlx::Pool<Sqlite>,
 }
 
 impl AppData {
-    pub fn new() -> AppData {
+    // INFO: We should panic to make app stop when we cant init data.
+    pub async fn new() -> AppData {
         AppData {
-            registering_pool: Mutex::new(vec![]),
+            registering_pool: Arc::new(Mutex::new(vec![])),
+            db_conn: SqlitePoolOptions::new()
+                .max_connections(5)
+                .connect(&std::env::var("DATABALSE_URL").unwrap())
+                .await
+                .unwrap(),
         }
     }
 }
-
-type AnyResult<T = ()> = anyhow::Result<T>;
-
-pub struct SqlDatabase {
-    conn_pool: sqlx::Pool<Sqlite>,
+#[derive(Deserialize, Debug, sqlx::FromRow)]
+pub struct User {
+    pub id: String,
+    pub email: String,
 }
 
-impl SqlDatabase {
-    pub async fn new(db_path: &String) -> AnyResult<SqlDatabase> {
-        Ok(SqlDatabase {
-            conn_pool: SqlitePoolOptions::new()
-                .max_connections(5)
-                .connect(db_path)
-                .await?,
-        })
-    }
-}
-
-struct User {
-    id: String,
-    email: String,
-}
-struct Card {
-    id: String,
-    owner: String,
+#[derive(Deserialize, Debug, sqlx::FromRow)]
+pub struct Card {
+    pub id: String,
+    pub owner: String,
 }

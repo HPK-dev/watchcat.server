@@ -20,4 +20,6 @@ tracing-actix-web = "0.7"
 tokio = {version = "1.34",features = ["full"]}
 dotenv = "0.15.0"
 jsonwebtoken = "9.2.0"
+futures-util = "0.3.29"
 reqwest = "0.11.22"
+regex = "1.10.2"

@@ -42,11 +42,12 @@ impl RootSpanBuilder for CustomRootSpanBuilder {
     }
 }
 
-const REQUIRED_ENV_FIELD: [&str; 4] = [
-    "bind_ip",
-    "bind_port",
-    "google_oauth_key",
-    "google_oauth_id",
+const REQUIRED_ENV_FIELD: [&str; 5] = [
+    "BIND_IP",
+    "BIND_PORT",
+    "GOOGLE_OAUTH_KEY",
+    "GOOGLE_OAUTH_ID",
+    "DATABASE_URL",
 ];
 
 fn check_needed_env() -> AnyResult {
@@ -63,8 +64,8 @@ pub async fn main() -> AnyResult {
 
     check_needed_env()?;
 
-    let bind_ip = env::var("bind_ip")?;
-    let bind_port = env::var("bind_port")?;
+    let bind_ip = env::var("BIND_IP")?;
+    let bind_port = env::var("BIND_PORT")?;
 
     // tracing_subscriber::registry()
     //     .with(
@@ -82,6 +83,7 @@ pub async fn main() -> AnyResult {
             .service(hello)
             .service(user_auth::main)
             .service(token_login::main)
+            // WARN: This page will be replace with foront-end webpage
             .service(user_login::main)
             // App data
             .app_data(web::Data::new(AppData::new()))

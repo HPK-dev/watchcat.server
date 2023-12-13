@@ -22,4 +22,5 @@ The backend of our project `watchcat` for 2024 Taiwan science fair.
 
 | key | desc |
 |---|---|
-| user_id | primary key, the unique user id |
+|  id | primary key, the unique user id |
+| email | this user's email |
