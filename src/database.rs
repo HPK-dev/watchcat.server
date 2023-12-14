@@ -4,6 +4,8 @@ use sqlx::Sqlite;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
+use crate::routers::token_login::JwtCert;
+
 type AM<T> = Arc<Mutex<T>>;
 type AnyResult<T = ()> = anyhow::Result<T>;
 
@@ -11,6 +13,7 @@ type AnyResult<T = ()> = anyhow::Result<T>;
 pub struct AppData {
     pub registering_pool: AM<Vec<HashMap<String, String>>>,
     pub db_conn: sqlx::Pool<Sqlite>,
+    pub jwt_cert: JwtCert,
 }
 
 impl AppData {
@@ -23,6 +26,7 @@ impl AppData {
                 .connect(&std::env::var("DATABALSE_URL").unwrap())
                 .await
                 .unwrap(),
+            jwt_cert: JwtCert::new().await,
         }
     }
 }

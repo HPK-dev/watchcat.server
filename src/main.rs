@@ -6,7 +6,7 @@ use actix_web::web;
 use actix_web::Error;
 use actix_web::{get, App, HttpServer};
 use dotenv::dotenv;
-use routers::{token_login, user_auth, user_login};
+use routers::{card_login, token_login, user_login};
 use serde::Deserialize;
 
 use crate::database::AppData;
@@ -64,6 +64,9 @@ pub async fn main() -> AnyResult {
 
     check_needed_env()?;
 
+    std::env::set_var("RUST_LOG", "debug");
+    env_logger::init();
+
     let bind_ip = env::var("BIND_IP")?;
     let bind_port = env::var("BIND_PORT")?;
 
@@ -81,7 +84,7 @@ pub async fn main() -> AnyResult {
             .wrap(TracingLogger::default())
             // routers
             .service(hello)
-            .service(user_auth::main)
+            .service(card_login::main)
             .service(token_login::main)
             // WARN: This page will be replace with foront-end webpage
             .service(user_login::main)

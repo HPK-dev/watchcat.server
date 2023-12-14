@@ -1,9 +1,9 @@
 use crate::database::{AppData, User};
 use actix_web::{post, web, HttpRequest, HttpResponse};
 use anyhow::anyhow;
-use futures_util::TryStreamExt;
 use jsonwebtoken::jwk::AlgorithmParameters;
 use jsonwebtoken::{decode, decode_header, jwk, Algorithm, DecodingKey, TokenData, Validation};
+use lazy_static::lazy_static;
 use regex::Regex;
 use serde::de::value::MapDeserializer;
 use serde::Deserialize;
@@ -21,6 +21,11 @@ pub struct GoogleUser {
     g_csrf_token: String,
 }
 type AnyResult<T = ()> = anyhow::Result<T>;
+
+lazy_static! {
+    static ref REGEX_SUB: Regex = Regex::new(r"[^a-zA-Z0-9]").unwrap();
+    static ref REGEX_EMAIL: Regex = Regex::new(r"[^a-zA-Z0-9@._]").unwrap();
+}
 
 #[instrument(level = Level::DEBUG)]
 #[post("/token_login")]
@@ -42,7 +47,7 @@ pub async fn main(
     let token = &item.credential;
 
     // Decode
-    let decoded_cred = match jwt_decoder(token).await {
+    let decoded_cred = match jwt_decoder(token, &data.jwt_cert.val).await {
         Err(e) => {
             println!("{:?}", e);
             return Ok(HttpResponse::InternalServerError().into());
@@ -60,28 +65,24 @@ pub async fn main(
         return Ok(HttpResponse::BadRequest().body("Invalid token."));
     }
 
-    // Update user sub
-    let rows = sqlx::query_as::<Sqlite, User>("SELECT id, email from user")
-        .fetch_all(&data.db_conn)
-        .await?;
-
     let sub = &payload.sub;
     let email = &payload.email;
 
     // IMPORTANT: Ensure `sub` and `email` both does not contain ANY specical characters.
-    if Regex::new(r"[^a-zA-Z0-9]")?.is_match(&sub)
-        || Regex::new(r"[^a-zA-Z0-9@._]")?.is_match(&email)
-    {
+    if REGEX_SUB.is_match(sub) || REGEX_EMAIL.is_match(email) {
         println!("Suspicious values.");
         println!("payload: {:?}", payload);
         return Ok(HttpResponse::BadRequest().body("Invalid token."));
     }
 
-    let filted_users: Vec<User> = rows.into_iter().filter(|v| v.id == *sub).collect();
+    // Update user sub
+    let rows = sqlx::query_as::<Sqlite, User>("SELECT id, email from user")
+        .fetch_all(&data.db_conn)
+        .await?;
 
     // This user doesn't register yet
-    if filted_users.len() == 0 {
-        let result = sqlx::query("INSERT INTO user (id, email) VALUES ($1, $2)")
+    if !rows.into_iter().any(|v| v.id == *sub) {
+        let _ = sqlx::query("INSERT INTO user (id, email) VALUES ($1, $2)")
             .bind(sub)
             .bind(email)
             .execute(&data.db_conn)
@@ -93,18 +94,43 @@ pub async fn main(
     Ok(HttpResponse::Ok().into())
 }
 
-struct JwtCert {
+#[derive(Debug)]
+pub struct JwtCert {
     exp: Duration,
+    val: String,
 }
 
 impl JwtCert {
-    fn refresh(&mut self) {
-        let start = SystemTime::now();
-        let since_the_epoch = start
-            .duration_since(UNIX_EPOCH)
-            .expect("Time went backwards");
+    async fn refresh_data(&mut self) -> AnyResult {
+        let since_the_epoch = SystemTime::now().duration_since(UNIX_EPOCH)?;
 
-        self.exp = since_the_epoch;
+        self.exp = since_the_epoch + Duration::from_secs(3600);
+        self.val = reqwest::get("https://www.googleapis.com/oauth2/v3/certs")
+            .await?
+            .text()
+            .await?;
+
+        Ok(())
+    }
+
+    async fn refresh(&mut self) -> AnyResult {
+        let since_the_epoch = SystemTime::now().duration_since(UNIX_EPOCH)?;
+        if since_the_epoch > self.exp {
+            self.refresh_data().await?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn new() -> JwtCert {
+        let mut jwt_cert = JwtCert {
+            exp: Duration::from_secs(1),
+            val: "".to_string(),
+        };
+
+        let _ = jwt_cert.refresh_data().await;
+
+        jwt_cert
     }
 }
 
@@ -127,17 +153,11 @@ struct JwtToken {
     jti: String,
 }
 
-async fn jwt_decoder(token: &String) -> AnyResult<TokenData<HashMap<String, Value>>> {
-    //////////////////////////////////////////////////////////////////////////
-    // WARN: This impl will send a request on each Google login request!
-    // Should make a cache to save the cert.
-    let jwt_reply = reqwest::get("https://www.googleapis.com/oauth2/v3/certs")
-        .await?
-        .text()
-        .await?;
-    //////////////////////////////////////////////////////////////////////////
-
-    let jwks: jwk::JwkSet = serde_json::from_str(&jwt_reply)?;
+async fn jwt_decoder(
+    token: &String,
+    jwt_reply: &String,
+) -> AnyResult<TokenData<HashMap<String, Value>>> {
+    let jwks: jwk::JwkSet = serde_json::from_str(jwt_reply)?;
 
     let header = decode_header(token)?;
     let kid = match header.kid {
