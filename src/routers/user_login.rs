@@ -1,8 +1,5 @@
 use actix_web::{get, http::StatusCode, HttpResponse};
 use std::env;
-use tracing::{instrument, Level};
-
-#[instrument(level = Level::DEBUG)]
 #[get("/user_login")]
 pub async fn main() -> HttpResponse {
     HttpResponse::build(StatusCode::OK)

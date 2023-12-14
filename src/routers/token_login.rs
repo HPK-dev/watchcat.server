@@ -4,6 +4,7 @@ use anyhow::anyhow;
 use jsonwebtoken::jwk::AlgorithmParameters;
 use jsonwebtoken::{decode, decode_header, jwk, Algorithm, DecodingKey, TokenData, Validation};
 use lazy_static::lazy_static;
+use log::{error, warn};
 use regex::Regex;
 use serde::de::value::MapDeserializer;
 use serde::Deserialize;
@@ -13,7 +14,6 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::str::FromStr;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use tracing::{instrument, Level};
 
 #[derive(Deserialize, Debug)]
 pub struct GoogleUser {
@@ -27,7 +27,6 @@ lazy_static! {
     static ref REGEX_EMAIL: Regex = Regex::new(r"[^a-zA-Z0-9@._]").unwrap();
 }
 
-#[instrument(level = Level::DEBUG)]
 #[post("/token_login")]
 pub async fn main(
     req: HttpRequest,
@@ -46,10 +45,13 @@ pub async fn main(
     // Get the encoded JWT
     let token = &item.credential;
 
+    let mut jwt_cert = data.jwt_cert.lock().unwrap();
+    let jwt_cert = jwt_cert.get_cert().await;
+
     // Decode
-    let decoded_cred = match jwt_decoder(token, &data.jwt_cert.val).await {
+    let decoded_cred = match jwt_decoder(token, jwt_cert).await {
         Err(e) => {
-            println!("{:?}", e);
+            error!("{:?}", e);
             return Ok(HttpResponse::InternalServerError().into());
         }
         Ok(val) => val,
@@ -60,8 +62,9 @@ pub async fn main(
 
     // If the JWT is not issued by Google, should the token be considered as forged by others? 🤔
     let iss = &payload.iss;
-    if iss == "accounts.google.com" || iss == "https://accounts.google.com" {
-        println!("Unknown JWT issuer! {:?}", iss);
+    if !(iss == "accounts.google.com" || iss == "https://accounts.google.com") {
+        warn!("Unknown JWT issuer! {:?}", iss);
+        warn!("{:?}", payload);
         return Ok(HttpResponse::BadRequest().body("Invalid token."));
     }
 
@@ -70,8 +73,8 @@ pub async fn main(
 
     // IMPORTANT: Ensure `sub` and `email` both does not contain ANY specical characters.
     if REGEX_SUB.is_match(sub) || REGEX_EMAIL.is_match(email) {
-        println!("Suspicious values.");
-        println!("payload: {:?}", payload);
+        warn!("Suspicious values.");
+        warn!("payload: {:?}", payload);
         return Ok(HttpResponse::BadRequest().body("Invalid token."));
     }
 
@@ -132,9 +135,21 @@ impl JwtCert {
 
         jwt_cert
     }
+
+    pub async fn get_cert(&mut self) -> &String {
+        let r = self.refresh().await;
+
+        if r.is_err_and(|e| {
+            error!("{:?}", e);
+            true
+        }) {}
+
+        return &self.val;
+    }
 }
 
 #[derive(Deserialize, Debug)]
+#[allow(dead_code)]
 struct JwtToken {
     iss: String, // The JWT's issuer
     nbf: u64,
@@ -172,7 +187,7 @@ async fn jwt_decoder(
                 let mut validation = Validation::new(Algorithm::from_str(
                     j.common.key_algorithm.unwrap().to_string().as_str(),
                 )?);
-                let aud = std::env::var("google_oauth_id")?;
+                let aud = std::env::var("GOOGLE_OAUTH_ID")?;
                 validation.set_audience(&[aud]);
 
                 validation.validate_exp = false;
