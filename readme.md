@@ -6,8 +6,7 @@ The backend of our project `watchcat` for 2024 Taiwan science fair.
 
 | method | route | args | desc |
 |---|---|---|---|
-| POST | `/user_reg` | empty | registe a user .|
-| GET | `/user_auth` | `card_id` => card id | Check if this card can be approved |
+| GET | `/card_login` | `card_id` => card id | Check if this card can be approved |
 | POST | `/token_login` | private/unknown ( ask Google ) | Google login callback |
 
 ## Database
