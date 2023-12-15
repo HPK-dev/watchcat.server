@@ -1,4 +1,5 @@
 use crate::database::{AppData, User};
+use actix_web::cookie::time::Duration as CookieDuration;
 use actix_web::{post, web, HttpRequest, HttpResponse};
 use anyhow::anyhow;
 use jsonwebtoken::jwk::AlgorithmParameters;
@@ -23,8 +24,8 @@ pub struct GoogleUser {
 type AnyResult<T = ()> = anyhow::Result<T>;
 
 lazy_static! {
-    static ref REGEX_SUB: Regex = Regex::new(r"[^a-zA-Z0-9]").unwrap();
-    static ref REGEX_EMAIL: Regex = Regex::new(r"[^a-zA-Z0-9@._]").unwrap();
+    static ref RE_SUB: Regex = Regex::new(r"[^a-zA-Z0-9]").unwrap();
+    static ref RE_EMAIL: Regex = Regex::new(r"[^a-zA-Z0-9@._]").unwrap();
 }
 
 #[post("/token_login")]
@@ -52,7 +53,7 @@ pub async fn main(
     let decoded_cred = match jwt_decoder(token, jwt_cert).await {
         Err(e) => {
             error!("{:?}", e);
-            return Ok(HttpResponse::InternalServerError().into());
+            return Ok(HttpResponse::InternalServerError().finish());
         }
         Ok(val) => val,
     };
@@ -72,7 +73,7 @@ pub async fn main(
     let email = &payload.email;
 
     // IMPORTANT: Ensure `sub` and `email` both does not contain ANY specical characters.
-    if REGEX_SUB.is_match(sub) || REGEX_EMAIL.is_match(email) {
+    if RE_SUB.is_match(sub) || RE_EMAIL.is_match(email) {
         warn!("Suspicious values.");
         warn!("payload: {:?}", payload);
         return Ok(HttpResponse::BadRequest().body("Invalid token."));
@@ -90,11 +91,18 @@ pub async fn main(
             .bind(email)
             .execute(&data.db_conn)
             .await?;
+        
+        // INFO: We send our data to front end for card registering.
+        // TODO: Wait a front end impl
     }
 
-    // TODO: This should return a redirect response
-    //       wait a front-end impl
-    Ok(HttpResponse::Ok().into())
+    // TODO: Save to cookie and redirect
+
+    let cookie = actix_web::cookie::Cookie::build("logged", "true")
+        .max_age(CookieDuration::days(14))
+        .finish();
+
+    Ok(HttpResponse::Ok().cookie(cookie).finish())
 }
 
 #[derive(Debug)]
