@@ -35,6 +35,7 @@ pub struct User {
 
 #[derive(Deserialize, Debug, sqlx::FromRow)]
 pub struct Card {
+    pub expire: Option<String>,
     pub id: String,
     pub owner: String,
 }

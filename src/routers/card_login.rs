@@ -7,7 +7,7 @@ use serde::Deserialize;
 use sqlx::Sqlite;
 use std::{
     error::Error,
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 use crate::database::{AppData, Card};
@@ -33,35 +33,25 @@ pub async fn main(
         return Ok(HttpResponse::BadRequest().into());
     }
 
-    let rows = sqlx::query_as::<Sqlite, Card>("SELECT id, owner FROM card").fetch(&data.db_conn);
+    let rows =
+        sqlx::query_as::<Sqlite, Card>("SELECT id, owner, expire FROM card").fetch(&data.db_conn);
 
     if rows
         .any(|val| async {
             match val {
                 Ok(val) => {
-                    if val.id != info.card_id {
-                        return false;
-                    };
+                    val.id == info.card_id
+                        && val.expire.is_some_and(|v| {
+                            // Calculate the duration since the Unix epoch
+                            let duration_since_epoch = SystemTime::now()
+                                .duration_since(UNIX_EPOCH)
+                                .expect("Time went backwards");
 
-                    let expired_time = val.expire;
-                    if !expired_time.is_some_and(|v| {
-                        // Get the current time
-                        let current_time = SystemTime::now();
+                            // Extract the number of seconds as a u64
+                            let timestamp_seconds = duration_since_epoch.as_secs();
 
-                        // Calculate the duration since the Unix epoch
-                        let duration_since_epoch = current_time
-                            .duration_since(UNIX_EPOCH)
-                            .expect("Time went backwards");
-
-                        // Extract the number of seconds as a u64
-                        let timestamp_seconds = duration_since_epoch.as_secs();
-
-                        v.parse::<u64>().expect("Invalid time") > timestamp_seconds
-                    }) {
-                        return false;
-                    }
-
-                    true
+                            v.parse::<u64>().expect("Invalid time") < timestamp_seconds
+                        })
                 }
                 Err(e) => {
                     error!("Something went wrong!");

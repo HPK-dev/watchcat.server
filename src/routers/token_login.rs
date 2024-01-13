@@ -1,5 +1,6 @@
 use crate::database::{AppData, User};
 use actix_web::cookie::time::Duration as CookieDuration;
+use actix_web::web::Redirect;
 use actix_web::{post, web, HttpRequest, HttpResponse};
 use anyhow::anyhow;
 use jsonwebtoken::jwk::AlgorithmParameters;
@@ -11,8 +12,10 @@ use serde::de::value::MapDeserializer;
 use serde::Deserialize;
 use serde_json::Value;
 use sqlx::Sqlite;
+use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::error::Error;
+use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -91,18 +94,25 @@ pub async fn main(
             .bind(email)
             .execute(&data.db_conn)
             .await?;
-        
-        // INFO: We send our data to front end for card registering.
-        // TODO: Wait a front end impl
     }
 
     // TODO: Save to cookie and redirect
+    // TODO: the cookie should not just set a `true`,
+    //       It should be set to a hashed `sub` which been saved to database
 
-    let cookie = actix_web::cookie::Cookie::build("logged", "true")
+    // Build hash with user's `sub` and current time
+    let mut s = DefaultHasher::new();
+    SystemTime::now().duration_since(UNIX_EPOCH)?.hash(&mut s);
+    sub.hash(&mut s);
+
+    let cookie = actix_web::cookie::Cookie::build("logged", s.finish().to_string())
         .max_age(CookieDuration::days(14))
         .finish();
 
-    Ok(HttpResponse::Ok().cookie(cookie).finish())
+    Ok(HttpResponse::Found()
+        .append_header(("Location", "/user_login"))
+        .cookie(cookie)
+        .finish())
 }
 
 #[derive(Debug)]
