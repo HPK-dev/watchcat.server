@@ -37,7 +37,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
     env_logger::init();
 
     let bind_ip = env::var("BIND_IP")?;
-    let bind_port = env::var("BIND_PORT")?;
+    let bind_port: u16 = env::var("BIND_PORT")?.parse()?;
 
     let app_data = web::Data::new(AppData::new().await);
 
@@ -55,7 +55,7 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
             // App data
             .app_data(app_data.clone())
     })
-    .bind(format!("{}:{}", bind_ip, bind_port))?;
+    .bind((bind_ip, bind_port))?;
     server.run().await?;
 
     Ok(())

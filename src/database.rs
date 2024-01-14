@@ -14,7 +14,7 @@ pub struct AppData {
 }
 
 impl AppData {
-    // INFO: We should panic to make app stop when we cant init data.
+    // HINT: We should panic to make app stop when we cant init data.
     pub async fn new() -> AppData {
         AppData {
             registering_pool: Mutex::new(vec![]),

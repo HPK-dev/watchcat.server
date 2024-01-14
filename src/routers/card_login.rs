@@ -40,6 +40,7 @@ pub async fn main(
         .any(|val| async {
             match val {
                 Ok(val) => {
+                    // If id is equal and not expired, true
                     val.id == info.card_id
                         && val.expire.is_some_and(|v| {
                             // Calculate the duration since the Unix epoch
@@ -50,7 +51,7 @@ pub async fn main(
                             // Extract the number of seconds as a u64
                             let timestamp_seconds = duration_since_epoch.as_secs();
 
-                            v.parse::<u64>().expect("Invalid time") < timestamp_seconds
+                            v.parse::<u64>().expect("Invalid time") > timestamp_seconds
                         })
                 }
                 Err(e) => {
@@ -62,8 +63,8 @@ pub async fn main(
         })
         .await
     {
-        Ok(HttpResponse::Ok().into())
+        Ok(HttpResponse::Ok().finish())
     } else {
-        Ok(HttpResponse::Forbidden().into())
+        Ok(HttpResponse::Forbidden().finish())
     }
 }
