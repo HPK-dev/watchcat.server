@@ -10,13 +10,13 @@ use regex::Regex;
 use serde::de::value::MapDeserializer;
 use serde::Deserialize;
 use serde_json::Value;
-use sqlx::Sqlite;
+use sqlx::Postgres;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::error::Error;
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Deserialize, Debug)]
 pub struct GoogleUser {
@@ -48,8 +48,8 @@ pub async fn main(
     // Get the encoded JWT
     let token = &item.credential;
 
-    let mut jwt_cert = data.jwt_cert.lock().unwrap();
-    let jwt_cert = jwt_cert.get_cert().await;
+    let jwt_cert = data.jwt_cert.lock().await;
+    let jwt_cert = &(jwt_cert).cert;
 
     // Decode
     let decoded_cred = match jwt_decoder(token, jwt_cert).await {
@@ -82,7 +82,7 @@ pub async fn main(
     }
 
     // Update user sub
-    let rows = sqlx::query_as::<Sqlite, User>("SELECT id, email from user")
+    let rows = sqlx::query_as::<Postgres, User>("SELECT id, email from user")
         .fetch_all(&data.db_conn)
         .await?;
 
@@ -117,54 +117,67 @@ pub async fn main(
 
 #[derive(Debug)]
 pub struct JwtCert {
-    exp: Duration,
-    val: String,
+    cert: String,
 }
 
 impl JwtCert {
-    async fn refresh_data(&mut self) -> AnyResult {
-        let since_the_epoch = SystemTime::now().duration_since(UNIX_EPOCH)?;
-
-        self.exp = since_the_epoch + Duration::from_secs(3600);
-        self.val = reqwest::get("https://www.googleapis.com/oauth2/v3/certs")
+    pub async fn new() -> AnyResult<JwtCert> {
+        let val = reqwest::get("https://www.googleapis.com/oauth2/v3/certs")
             .await?
             .text()
             .await?;
 
-        Ok(())
-    }
-
-    async fn refresh(&mut self) -> AnyResult {
-        let since_the_epoch = SystemTime::now().duration_since(UNIX_EPOCH)?;
-        if since_the_epoch > self.exp {
-            self.refresh_data().await?;
-        }
-
-        Ok(())
-    }
-
-    pub async fn new() -> JwtCert {
-        let mut jwt_cert = JwtCert {
-            exp: Duration::from_secs(1),
-            val: "".to_string(),
-        };
-
-        let _ = jwt_cert.refresh_data().await;
-
-        jwt_cert
-    }
-
-    pub async fn get_cert(&mut self) -> &String {
-        let r = self.refresh().await;
-
-        if r.is_err_and(|e| {
-            error!("{:?}", e);
-            true
-        }) {}
-
-        return &self.val;
+        Ok(JwtCert { cert: val })
     }
 }
+
+// #[derive(Debug)]
+// pub struct JwtCert {
+//     exp: Duration,
+//     val: String,
+// }
+//
+// impl JwtCert {
+//     async fn refresh_data(&mut self) -> AnyResult {
+//         let since_the_epoch = SystemTime::now().duration_since(UNIX_EPOCH)?;
+//
+//         self.exp = since_the_epoch + Duration::from_secs(3600);
+//         self.val = reqwest::get("https://www.googleapis.com/oauth2/v3/certs")
+//             .await?
+//             .text()
+//             .await?;
+//
+//         Ok(())
+//     }
+//
+//     async fn refresh(&mut self) -> AnyResult {
+//         let since_the_epoch = SystemTime::now().duration_since(UNIX_EPOCH)?;
+//         if since_the_epoch > self.exp {
+//             self.refresh_data().await?;
+//         }
+//
+//         Ok(())
+//     }
+//
+//     pub async fn new() -> JwtCert {
+//         let mut jwt_cert = JwtCert {
+//             exp: Duration::from_secs(1),
+//             val: "".to_string(),
+//         };
+//
+//         let _ = jwt_cert.refresh_data().await;
+//
+//         jwt_cert
+//     }
+//
+//     pub async fn get_cert(&mut self) -> &String {
+//         if let Err(e) = self.refresh().await {
+//             println!("{:?}", e)
+//         }
+//
+//         &self.val
+//     }
+// }
 
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]
@@ -186,10 +199,7 @@ struct JwtToken {
     jti: String,
 }
 
-async fn jwt_decoder(
-    token: &String,
-    jwt_reply: &String,
-) -> AnyResult<TokenData<HashMap<String, Value>>> {
+async fn jwt_decoder(token: &str, jwt_reply: &str) -> AnyResult<TokenData<HashMap<String, Value>>> {
     let jwks: jwk::JwkSet = serde_json::from_str(jwt_reply)?;
 
     let header = decode_header(token)?;
@@ -215,11 +225,11 @@ async fn jwt_decoder(
                     &validation,
                 )?;
 
-                return Ok(decoded_token);
+                Ok(decoded_token)
             }
-            _ => return Err(anyhow!("This should be a RSA")),
+            _ => Err(anyhow!("This should be a RSA")),
         }
     } else {
-        return Err(anyhow!("No matching JWK found for the given kid"));
+        Err(anyhow!("No matching JWK found for the given kid"))
     }
 }

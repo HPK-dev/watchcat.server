@@ -1,5 +1,6 @@
 mod database;
 mod routers;
+
 use actix_web::middleware::Logger;
 use actix_web::{get, App, HttpServer};
 use actix_web::{web, HttpResponse};
@@ -21,7 +22,7 @@ const REQUIRED_ENV_FIELD: [&str; 5] = [
 
 fn check_needed_env() -> Result<(), Box<dyn Error>> {
     for f in REQUIRED_ENV_FIELD {
-        env::var(f).expect(&format!("Required env variable `{}` is missing!", f));
+        env::var(f).unwrap_or_else(|_| panic!("Required env variable `{}` is missing!", f));
     }
 
     Ok(())
@@ -33,7 +34,6 @@ pub async fn main() -> Result<(), Box<dyn Error>> {
 
     check_needed_env()?;
 
-    std::env::set_var("RUST_LOG", "debug");
     env_logger::init();
 
     let bind_ip = env::var("BIND_IP")?;

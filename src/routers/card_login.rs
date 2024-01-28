@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 use log::{debug, error};
 use regex::Regex;
 use serde::Deserialize;
-use sqlx::Sqlite;
+use sqlx::Postgres;
 use std::{
     error::Error,
     time::{SystemTime, UNIX_EPOCH},
@@ -34,7 +34,7 @@ pub async fn main(
     }
 
     let rows =
-        sqlx::query_as::<Sqlite, Card>("SELECT id, owner, expire FROM card").fetch(&data.db_conn);
+        sqlx::query_as::<Postgres, Card>("SELECT id, owner, expire FROM card").fetch(&data.db_conn);
 
     if rows
         .any(|val| async {

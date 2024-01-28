@@ -1,0 +1,12 @@
+services:
+  server:
+    build: .
+    ports:
+      - "${BIND_PORT}:${BIND_PORT}"
+    env_file:
+      - .env
+      - .env.docker
+  # db:
+  #   image: postgres
+  #   ports:
+  #     - "8001:5432"

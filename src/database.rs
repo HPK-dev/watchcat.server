@@ -1,15 +1,15 @@
 use serde::Deserialize;
-use sqlx::sqlite::SqlitePoolOptions;
-use sqlx::Sqlite;
+use sqlx::postgres::PgPoolOptions;
+use sqlx::Postgres;
 use std::collections::HashMap;
-use std::sync::Mutex;
+use tokio::sync::Mutex;
 
 use crate::routers::token_login::JwtCert;
 
 #[derive(Debug)]
 pub struct AppData {
     pub registering_pool: Mutex<Vec<HashMap<String, String>>>,
-    pub db_conn: sqlx::Pool<Sqlite>,
+    pub db_conn: sqlx::Pool<Postgres>,
     pub jwt_cert: Mutex<JwtCert>,
 }
 
@@ -18,15 +18,15 @@ impl AppData {
     pub async fn new() -> AppData {
         AppData {
             registering_pool: Mutex::new(vec![]),
-            db_conn: SqlitePoolOptions::new()
-                .max_connections(5)
+            db_conn: PgPoolOptions::new()
                 .connect(&std::env::var("DATABASE_URL").unwrap())
                 .await
                 .unwrap(),
-            jwt_cert: Mutex::new(JwtCert::new().await),
+            jwt_cert: Mutex::new(JwtCert::new().await.unwrap()),
         }
     }
 }
+
 #[derive(Deserialize, Debug, sqlx::FromRow)]
 pub struct User {
     pub id: String,
