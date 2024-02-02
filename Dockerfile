@@ -1,4 +1,4 @@
-FROM: rust:1.74.0
+FROM rust:1.74.0
 WORKDIR /app/watchcat-server
 
 COPY src/ src/
