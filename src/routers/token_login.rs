@@ -82,13 +82,13 @@ pub async fn main(
     }
 
     // Update user sub
-    let rows = sqlx::query_as::<Postgres, User>("SELECT id, email from user")
+    let rows = sqlx::query_as::<Postgres, User>("SELECT id, email from Users")
         .fetch_all(&data.db_conn)
         .await?;
 
     // This user doesn't register yet
     if !rows.into_iter().any(|v| v.id == *sub) {
-        let _ = sqlx::query("INSERT INTO user (id, email) VALUES ($1, $2)")
+        let _ = sqlx::query("INSERT INTO Users (id, email) VALUES ($1, $2)")
             .bind(sub)
             .bind(email)
             .execute(&data.db_conn)

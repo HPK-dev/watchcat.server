@@ -33,38 +33,43 @@ pub async fn main(
         return Ok(HttpResponse::BadRequest().into());
     }
 
-    let rows =
-        sqlx::query_as::<Postgres, Card>("SELECT id, owner, expire FROM card").fetch(&data.db_conn);
+    let rows = sqlx::query_as::<Postgres, Card>("SELECT id, owner, expire FROM Cards")
+        .fetch(&data.db_conn);
 
-    if rows
+    match rows
         .any(|val| async {
-            match val {
-                Ok(val) => {
-                    // If id is equal and not expired, true
-                    val.id == info.card_id
-                        && val.expire.is_some_and(|v| {
-                            // Calculate the duration since the Unix epoch
-                            let duration_since_epoch = SystemTime::now()
-                                .duration_since(UNIX_EPOCH)
-                                .expect("Time went backwards");
-
-                            // Extract the number of seconds as a u64
-                            let timestamp_seconds = duration_since_epoch.as_secs();
-
-                            v.parse::<u64>().expect("Invalid time") > timestamp_seconds
-                        })
+            if let Err(e) = val {
+                error!("Something went wrong!");
+                error!("{:?}", e);
+                panic!("err!") // WARN: need some investigation
+            } else {
+                let card = val.unwrap();
+                if card.id != info.card_id {
+                    return false;
                 }
-                Err(e) => {
-                    error!("Something went wrong!");
-                    error!("{:?}", e);
-                    false
+
+                if card.expire.is_none() {
+                    return true;
                 }
+
+                let ex = card.expire.unwrap();
+
+                let timestamp_ms = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .expect("Time went backwards")
+                    .as_secs();
+
+                let expire_ms: u64 = ex
+                    .timestamp_millis()
+                    .try_into()
+                    .expect("Time went backwards"); // ?? :thinking emoji:
+
+                expire_ms > timestamp_ms
             }
         })
         .await
     {
-        Ok(HttpResponse::Ok().finish())
-    } else {
-        Ok(HttpResponse::Forbidden().finish())
+        true => Ok(HttpResponse::Ok().finish()),
+        false => Ok(HttpResponse::Forbidden().finish()),
     }
 }
