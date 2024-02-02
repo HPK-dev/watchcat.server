@@ -1,35 +1,54 @@
 mod database;
 mod routers;
 
+use crate::database::AppData;
 use actix_web::middleware::Logger;
 use actix_web::{get, App, HttpServer};
 use actix_web::{web, HttpResponse};
 use dotenv::dotenv;
+use log::error;
 use routers::{card_login, token_login, user_login};
 use serde::Deserialize;
-
-use crate::database::AppData;
 use std::env;
-use std::error::Error;
 
-const REQUIRED_ENV_FIELD: [&str; 5] = [
-    "BIND_IP",
-    "BIND_PORT",
-    "GOOGLE_OAUTH_KEY",
-    "GOOGLE_OAUTH_ID",
-    "DATABASE_URL",
-];
+type AnyResult<T = ()> = anyhow::Result<T>;
 
-fn check_needed_env() -> Result<(), Box<dyn Error>> {
-    for f in REQUIRED_ENV_FIELD {
-        env::var(f).unwrap_or_else(|_| panic!("Required env variable `{}` is missing!", f));
+fn check_needed_env() -> AnyResult {
+    let required_env_field: [&str; 5] = [
+        "BIND_IP",
+        "BIND_PORT",
+        "GOOGLE_OAUTH_CLIENT_SECERT",
+        "GOOGLE_OAUTH_CLIENT_ID",
+        "PG_DATABASE_URL",
+    ];
+
+    let mut missing: Vec<&str> = Vec::new();
+    let mut should_crash = false;
+
+    for f in required_env_field {
+        match env::var(f) {
+            Ok(_) => {}
+            Err(e) => {
+                should_crash = true;
+                missing.push(f);
+            }
+        }
+    }
+
+    if should_crash {
+        println!("Some env var are missing!");
+        for val in missing {
+            println!("    {:?}", val);
+        }
+
+        return Err(anyhow::anyhow!("missing env vars"));
     }
 
     Ok(())
 }
 
 #[actix_web::main]
-pub async fn main() -> Result<(), Box<dyn Error>> {
+pub async fn main() -> AnyResult {
     dotenv().ok();
 
     check_needed_env()?;

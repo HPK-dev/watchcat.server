@@ -215,7 +215,7 @@ async fn jwt_decoder(token: &str, jwt_reply: &str) -> AnyResult<TokenData<HashMa
                 let mut validation = Validation::new(Algorithm::from_str(
                     j.common.key_algorithm.unwrap().to_string().as_str(),
                 )?);
-                let aud = std::env::var("GOOGLE_OAUTH_ID")?;
+                let aud = std::env::var("GOOGLE_OAUTH_CLIENT_ID")?;
                 validation.set_audience(&[aud]);
 
                 validation.validate_exp = false;

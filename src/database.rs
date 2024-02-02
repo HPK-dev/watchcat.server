@@ -19,7 +19,7 @@ impl AppData {
         AppData {
             registering_pool: Mutex::new(vec![]),
             db_conn: PgPoolOptions::new()
-                .connect(&std::env::var("DATABASE_URL").unwrap())
+                .connect(&std::env::var("PG_DATABASE_URL").unwrap())
                 .await
                 .unwrap(),
             jwt_cert: Mutex::new(JwtCert::new().await.unwrap()),
