@@ -16,7 +16,7 @@ chmod +x ./install.sh
 
 ### Run manually (with docker)
 
-1. set following variables  in `.env.docker`
+1. set following variables  in `.env`
 
     - "BIND_IP"
     - "BIND_PORT" 
