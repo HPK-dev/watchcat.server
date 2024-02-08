@@ -1,15 +1,14 @@
+use crate::routers::token_login::JwtCert;
 use serde::Deserialize;
-use sqlx::postgres::PgPoolOptions;
-use sqlx::Postgres;
+use sqlx::mysql::MySqlPoolOptions;
+use sqlx::MySql;
 use std::collections::HashMap;
 use tokio::sync::Mutex;
-
-use crate::routers::token_login::JwtCert;
 
 #[derive(Debug)]
 pub struct AppData {
     pub registering_pool: Mutex<Vec<HashMap<String, String>>>,
-    pub db_conn: sqlx::Pool<Postgres>,
+    pub db_conn: sqlx::Pool<MySql>,
     pub jwt_cert: Mutex<JwtCert>,
 }
 
@@ -18,8 +17,8 @@ impl AppData {
     pub async fn new() -> AppData {
         AppData {
             registering_pool: Mutex::new(vec![]),
-            db_conn: PgPoolOptions::new()
-                .connect(&std::env::var("PG_DATABASE_URL").unwrap())
+            db_conn: MySqlPoolOptions::new()
+                .connect(&std::env::var("DATABASE_URL").unwrap())
                 .await
                 .unwrap(),
             jwt_cert: Mutex::new(JwtCert::new().await.unwrap()),

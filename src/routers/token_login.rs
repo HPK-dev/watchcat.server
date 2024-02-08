@@ -10,7 +10,7 @@ use regex::Regex;
 use serde::de::value::MapDeserializer;
 use serde::Deserialize;
 use serde_json::Value;
-use sqlx::Postgres;
+use sqlx::MySql;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::error::Error;
@@ -82,7 +82,7 @@ pub async fn main(
     }
 
     // Update user sub
-    let rows = sqlx::query_as::<Postgres, User>("SELECT id, email from Users")
+    let rows = sqlx::query_as::<MySql, User>("SELECT id, email from Users")
         .fetch_all(&data.db_conn)
         .await?;
 

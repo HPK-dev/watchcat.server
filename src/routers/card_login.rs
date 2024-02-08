@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 use log::{debug, error};
 use regex::Regex;
 use serde::Deserialize;
-use sqlx::Postgres;
+use sqlx::MySql;
 use std::{
     error::Error,
     time::{SystemTime, UNIX_EPOCH},
@@ -33,8 +33,8 @@ pub async fn main(
         return Ok(HttpResponse::BadRequest().into());
     }
 
-    let rows = sqlx::query_as::<Postgres, Card>("SELECT id, owner, expire FROM Cards")
-        .fetch(&data.db_conn);
+    let rows =
+        sqlx::query_as::<MySql, Card>("SELECT id, owner, expire FROM Cards").fetch(&data.db_conn);
 
     match rows
         .any(|val| async {
