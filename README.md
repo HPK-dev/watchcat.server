@@ -22,7 +22,7 @@ chmod +x ./install.sh
     - "BIND_PORT" 
     - "GOOGLE_OAUTH_CLIENT_SECERT" 
     - "GOOGLE_OAUTH_CLIENT_ID" 
-    - "PG_DATABASE_URL" 
+    - "DATABASE_URL" 
 
 2. build in docker
     ```bash
@@ -41,7 +41,7 @@ Ensure you have Rust installed.
     - "BIND_PORT" 
     - "GOOGLE_OAUTH_CLIENT_SECERT" 
     - "GOOGLE_OAUTH_CLIENT_ID" 
-    - "PG_DATABASE_URL" 
+    - "DATABASE_URL" 
 
 2. run
     ```bash

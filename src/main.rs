@@ -19,7 +19,7 @@ fn check_needed_env() -> AnyResult {
         "BIND_PORT",
         "GOOGLE_OAUTH_CLIENT_SECERT",
         "GOOGLE_OAUTH_CLIENT_ID",
-        "PG_DATABASE_URL",
+        "DATABASE_URL",
     ];
 
     let mut missing: Vec<&str> = Vec::new();

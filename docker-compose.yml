@@ -6,7 +6,3 @@ services:
     env_file:
       - .env
       - .env.docker
-  # db:
-  #   image: postgres
-  #   ports:
-  #     - "8001:5432"
