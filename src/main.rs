@@ -14,10 +14,9 @@ use std::env;
 type AnyResult<T = ()> = anyhow::Result<T>;
 
 fn check_needed_env() -> AnyResult {
-    let required_env_field: [&str; 5] = [
+    const REQUIRED_ENV_FIELD: [&str; 4] = [
         "BIND_IP",
         "BIND_PORT",
-        "GOOGLE_OAUTH_CLIENT_SECERT",
         "GOOGLE_OAUTH_CLIENT_ID",
         "DATABASE_URL",
     ];
@@ -25,7 +24,7 @@ fn check_needed_env() -> AnyResult {
     let mut missing: Vec<&str> = Vec::new();
     let mut should_crash = false;
 
-    for f in required_env_field {
+    for f in REQUIRED_ENV_FIELD {
         match env::var(f) {
             Ok(_) => {}
             Err(e) => {
