@@ -20,7 +20,6 @@ chmod +x ./install.sh
 
     - "BIND_IP"
     - "BIND_PORT" 
-    - "GOOGLE_OAUTH_CLIENT_SECERT" 
     - "GOOGLE_OAUTH_CLIENT_ID" 
     - "DATABASE_URL" 
 
@@ -39,7 +38,6 @@ Ensure you have Rust installed.
 
     - "BIND_IP"
     - "BIND_PORT" 
-    - "GOOGLE_OAUTH_CLIENT_SECERT" 
     - "GOOGLE_OAUTH_CLIENT_ID" 
     - "DATABASE_URL" 
 

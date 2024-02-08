@@ -21,7 +21,4 @@ echo "BIND_PORT=$port" >> .env.docker
 read -p 'Your Google OAuth Client ID:' id
 echo "GOOGLE_OAUTH_CLIENT_ID=$id" >> .env.docker
 
-read -p 'Your Google OAuth Client Secert:' key
-echo "GOOGLE_OAUTH_CLIENT_SECERT=$key" >>.env.docker
-
 sudo docker compose up
