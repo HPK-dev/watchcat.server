@@ -7,6 +7,4 @@ COPY Cargo.toml .
 
 ENV RUST_LOG info
 
-RUN cargo build --release
-
-ENTRYPOINT ["cargo", "run"]
+ENTRYPOINT ["cargo", "run", "--release"]

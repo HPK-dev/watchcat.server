@@ -13,15 +13,20 @@ pub struct AppData {
 }
 
 impl AppData {
-    // HINT: We should panic to make app stop when we cant init data.
     pub async fn new() -> AppData {
-        AppData {
-            registering_pool: Mutex::new(vec![]),
-            db_conn: MySqlPoolOptions::new()
-                .connect(&std::env::var("DATABASE_URL").unwrap())
-                .await
-                .unwrap(),
-            jwt_cert: Mutex::new(JwtCert::new().await.unwrap()),
+        let db_conn = MySqlPoolOptions::new()
+            .connect(&std::env::var("DATABASE_URL").unwrap())
+            .await;
+
+        match db_conn {
+            Ok(db_conn) => AppData {
+                registering_pool: Mutex::new(vec![]),
+                db_conn,
+                jwt_cert: Mutex::new(JwtCert::new().await.unwrap()),
+            },
+            Err(e) => {
+                panic!("Cannot initalize database!\nError message:\n{:#?}", e);
+            }
         }
     }
 }
