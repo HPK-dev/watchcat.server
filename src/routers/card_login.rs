@@ -62,7 +62,7 @@ pub async fn main(
                 let expire_ms: u64 = ex
                     .timestamp_millis()
                     .try_into()
-                    .expect("Time went backwards"); // ?? :thinking emoji:
+                    .expect("Time went backwards"); // ?? 🤔
 
                 expire_ms > timestamp_ms
             }
