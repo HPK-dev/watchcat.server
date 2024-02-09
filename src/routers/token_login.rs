@@ -95,8 +95,6 @@ pub async fn main(
             .await?;
     }
 
-    // TODO: Save to cookie and redirect
-
     // Build hash with user's `sub` and current time
     let mut s = DefaultHasher::new();
     SystemTime::now().duration_since(UNIX_EPOCH)?.hash(&mut s);
@@ -105,12 +103,12 @@ pub async fn main(
     // TODO: Should cached the result
     let hashed = s.finish().to_string();
 
-    let cookie = actix_web::cookie::Cookie::build("logged", hashed)
+    let cookie = actix_web::cookie::Cookie::build("user-logged", hashed)
         .max_age(CookieDuration::days(14))
         .finish();
 
     Ok(HttpResponse::Found()
-        .append_header(("Location", "/user_login"))
+        .append_header(("Location", "/after_login")) // WARN: redierct url
         .cookie(cookie)
         .finish())
 }
