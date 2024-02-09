@@ -9,13 +9,13 @@
 
 ## Database
 
-### table `card`
+### table `Cards`
 | key | desc |
 |---|---|
 | id | primary key, store each card |
 | owner | the card owner |
 
-### table `user`
+### table `Users`
 
 | key | desc |
 |---|---|
