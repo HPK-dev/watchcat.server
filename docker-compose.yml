@@ -5,4 +5,4 @@ services:
       - "${BIND_PORT}:${BIND_PORT}"
     env_file:
       - .env
-      - .env.docker
+    network_mode: host
