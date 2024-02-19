@@ -108,6 +108,7 @@ pub async fn main(
         .finish();
 
     Ok(HttpResponse::Found()
+        .append_header(("Access-Control-Allow-Origin", "*"))
         .append_header(("Location", "/after_login")) // WARN: redierct url
         .cookie(cookie)
         .finish())
