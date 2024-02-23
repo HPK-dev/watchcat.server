@@ -59,12 +59,12 @@ pub async fn main() -> AnyResult {
 
     let app_data = web::Data::new(AppData::new().await);
 
-    let cors = actix_cors::Cors::default()
-        .allowed_methods(vec!["POST"])
-        .allow_any_origin()
-        .max_age(3600);
-
     let server = HttpServer::new(move || {
+        let cors = actix_cors::Cors::default()
+            .allowed_methods(vec!["POST"])
+            .allow_any_origin()
+            .max_age(3600);
+
         App::new()
             // middleware
             .wrap(Logger::default())
