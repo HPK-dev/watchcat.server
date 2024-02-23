@@ -2,6 +2,7 @@ mod database;
 mod routers;
 
 use crate::database::AppData;
+use actix_cors::Cors;
 use actix_web::middleware::Logger;
 use actix_web::{get, App, HttpServer};
 use actix_web::{web, HttpResponse};
@@ -63,10 +64,13 @@ pub async fn main() -> AnyResult {
     let app_data = web::Data::new(AppData::new().await);
 
     let server = HttpServer::new(move || {
-        let cors = actix_cors::Cors::default()
-            .allowed_methods(vec!["POST"])
-            .allow_any_origin()
-            .max_age(3600);
+        // let cors = actix_cors::Cors::default()
+        //     .allowed_methods(vec!["POST"])
+        //     .allow_any_origin()
+        //     .max_age(3600);
+
+        // WARN: Do not use this in production!!!
+        let cors = Cors::permissive();
 
         App::new()
             // middleware
