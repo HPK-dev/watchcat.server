@@ -25,11 +25,11 @@ fn check_needed_env() -> AnyResult {
     let mut missing: Vec<&str> = Vec::new();
     let mut should_crash = false;
 
-    debug!("Checking env vars...");
+    println!("Checking env vars...");
     for f in REQUIRED_ENV_FIELD {
         match env::var(f) {
             Ok(v) => {
-                debug!("{}: {}", f, v);
+                println!("    {}: {}", f, v);
             }
             Err(e) => {
                 should_crash = true;
@@ -46,6 +46,8 @@ fn check_needed_env() -> AnyResult {
 
         return Err(anyhow::anyhow!("missing env vars"));
     }
+
+    println!();
 
     Ok(())
 }

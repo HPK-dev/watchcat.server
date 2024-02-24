@@ -5,7 +5,7 @@ use anyhow::anyhow;
 use jsonwebtoken::jwk::AlgorithmParameters;
 use jsonwebtoken::{decode, decode_header, jwk, Algorithm, DecodingKey, TokenData, Validation};
 use lazy_static::lazy_static;
-use log::{error, warn};
+use log::{debug, error, warn};
 use regex::Regex;
 use serde::de::value::MapDeserializer;
 use serde::Deserialize;
@@ -36,6 +36,8 @@ pub async fn main(
     item: web::Form<GoogleUser>,
     data: web::Data<AppData>,
 ) -> Result<HttpResponse, Box<dyn Error>> {
+    debug!("Start of handling token_login");
+
     // Obtain required data
     let cookie_token = req.cookie("g_csrf_token");
     let post_request_token = &item.g_csrf_token;
