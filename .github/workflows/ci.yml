@@ -1,0 +1,42 @@
+name: ci
+
+on:
+  push:
+    branches: [ "dev", "with_vue_front_end" ]
+  pull_request:
+    branches: [ "dev", "with_vue_front_end"]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -Dwarnings
+  RUST_BACKTRACE: 1
+  # Change to specific Rust release to pin
+  rust_version: '1.76'
+
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Rust v${{ env.rust_version }}
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt clippy
+
+    - name: Build
+      run: cargo build --verbose
+
+    - name: Run clippy
+      run: cargo clippy --all --tests --all-features --no-deps
+
+    - name: Format
+      uses: LoliGothick/rustfmt-check@master
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+
+
+
+
