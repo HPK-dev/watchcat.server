@@ -1,235 +1,68 @@
 use crate::database::{AppData, User};
 use actix_web::cookie::time::Duration as CookieDuration;
 use actix_web::{post, web, HttpRequest, HttpResponse};
-use anyhow::anyhow;
-use jsonwebtoken::jwk::AlgorithmParameters;
-use jsonwebtoken::{decode, decode_header, jwk, Algorithm, DecodingKey, TokenData, Validation};
-use lazy_static::lazy_static;
-use log::{debug, error, warn};
-use regex::Regex;
-use serde::de::value::MapDeserializer;
+use google_oauth::GoogleAccessTokenPayload;
+use log::debug;
 use serde::Deserialize;
-use serde_json::Value;
 use sqlx::MySql;
 use std::collections::hash_map::DefaultHasher;
-use std::collections::HashMap;
 use std::error::Error;
 use std::hash::{Hash, Hasher};
-use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-#[derive(Deserialize, Debug)]
-pub struct GoogleUser {
-    credential: String,
-    g_csrf_token: String,
-}
-type AnyResult<T = ()> = anyhow::Result<T>;
-
-lazy_static! {
-    static ref RE_SUB: Regex = Regex::new(r"[^a-zA-Z0-9]").unwrap();
-    static ref RE_EMAIL: Regex = Regex::new(r"[^a-zA-Z0-9@._]").unwrap();
+#[derive(Deserialize, Debug, Hash)]
+struct AccessToken {
+    access_token: String,
 }
 
 #[post("/token_login")]
 pub async fn main(
-    req: HttpRequest,
-    item: web::Form<GoogleUser>,
+    _req: HttpRequest,
+    item: web::Json<AccessToken>,
     data: web::Data<AppData>,
 ) -> Result<HttpResponse, Box<dyn Error>> {
-    debug!("Start of handling token_login");
-
-    // Obtain required data
-    let cookie_token = req.cookie("g_csrf_token");
-    let post_request_token = &item.g_csrf_token;
-
-    // Check if post-request token and cookie token are met.
-    if cookie_token.is_none() || cookie_token.unwrap().value() != post_request_token {
-        return Ok(HttpResponse::BadRequest().body("Failed to verify user."));
-    }
-
-    // Get the encoded JWT
-    let token = &item.credential;
-
-    let jwt_cert = data.jwt_cert.lock().await;
-    let jwt_cert = &(jwt_cert).cert;
-
-    // Decode
-    let decoded_cred = match jwt_decoder(token, jwt_cert).await {
+    let payload = match data
+        .google_oauth_client
+        .validate_access_token(&item.access_token)
+        .await
+    {
+        Ok(v) => v,
         Err(e) => {
-            error!("{:?}", e);
-            return Ok(HttpResponse::InternalServerError().finish());
+            debug!("Failed to validate access token: {:#?}", e);
+            return Ok(HttpResponse::BadRequest().body("Failed to validate access token."));
         }
-        Ok(val) => val,
     };
 
-    // Deserialize the Hashmap to `JwtToken`
-    let payload = JwtToken::deserialize(MapDeserializer::new(decoded_cred.claims.into_iter()))?;
+    debug!("Payload: {:#?}", payload);
 
-    // If the JWT is not issued by Google, should the token be considered as forged by others? 🤔
-    let iss = &payload.iss;
-    if !(iss == "accounts.google.com" || iss == "https://accounts.google.com") {
-        warn!("Unknown JWT issuer! {:?}", iss);
-        warn!("{:?}", payload);
-        return Ok(HttpResponse::BadRequest().body("Invalid token."));
-    }
+    let id = payload.sub;
+    let email = payload.email;
 
-    let sub = &payload.sub;
-    let email = &payload.email;
-
-    // IMPORTANT: Ensure `sub` and `email` both does not contain ANY specical characters.
-    if RE_SUB.is_match(sub) || RE_EMAIL.is_match(email) {
-        warn!("Suspicious values.");
-        warn!("payload: {:?}", payload);
-        return Ok(HttpResponse::BadRequest().body("Invalid token."));
-    }
+    // Build hash with posted data and current time
+    let mut s = DefaultHasher::new();
+    SystemTime::now().duration_since(UNIX_EPOCH)?.hash(&mut s);
+    item.hash(&mut s);
+    let hashed = s.finish().to_string(); // TODO: Should cached the result
+    let cookie = actix_web::cookie::Cookie::build("user-logged", hashed)
+        .max_age(CookieDuration::days(1))
+        .finish();
 
     // Update user sub
     let rows = sqlx::query_as::<MySql, User>("SELECT id, email from Users")
         .fetch_all(&data.db_conn)
         .await?;
 
-    // This user doesn't register yet
-    if !rows.into_iter().any(|v| v.id == *sub) {
-        let _ = sqlx::query("INSERT INTO Users (id, email) VALUES ($1, $2)")
-            .bind(sub)
+    //This user doesn't register yet
+    if !rows.into_iter().any(|v| v.id == id) {
+        let _ = sqlx::query("INSERT INTO Users (id, email) VALUES (?, ?)")
+            .bind(id)
             .bind(email)
             .execute(&data.db_conn)
             .await?;
     }
 
-    // Build hash with user's `sub` and current time
-    let mut s = DefaultHasher::new();
-    SystemTime::now().duration_since(UNIX_EPOCH)?.hash(&mut s);
-    sub.hash(&mut s);
-
-    // TODO: Should cached the result
-    let hashed = s.finish().to_string();
-
-    let cookie = actix_web::cookie::Cookie::build("user-logged", hashed)
-        .max_age(CookieDuration::days(14))
-        .finish();
-
     Ok(HttpResponse::Found()
         .append_header(("Location", "/after_login")) // WARN: redierct url
         .cookie(cookie)
         .finish())
-}
-
-#[derive(Debug)]
-pub struct JwtCert {
-    cert: String,
-}
-
-impl JwtCert {
-    pub async fn new() -> AnyResult<JwtCert> {
-        let val = reqwest::get("https://www.googleapis.com/oauth2/v3/certs")
-            .await?
-            .text()
-            .await?;
-
-        Ok(JwtCert { cert: val })
-    }
-}
-
-// #[derive(Debug)]
-// pub struct JwtCert {
-//     exp: Duration,
-//     val: String,
-// }
-//
-// impl JwtCert {
-//     async fn refresh_data(&mut self) -> AnyResult {
-//         let since_the_epoch = SystemTime::now().duration_since(UNIX_EPOCH)?;
-//
-//         self.exp = since_the_epoch + Duration::from_secs(3600);
-//         self.val = reqwest::get("https://www.googleapis.com/oauth2/v3/certs")
-//             .await?
-//             .text()
-//             .await?;
-//
-//         Ok(())
-//     }
-//
-//     async fn refresh(&mut self) -> AnyResult {
-//         let since_the_epoch = SystemTime::now().duration_since(UNIX_EPOCH)?;
-//         if since_the_epoch > self.exp {
-//             self.refresh_data().await?;
-//         }
-//
-//         Ok(())
-//     }
-//
-//     pub async fn new() -> JwtCert {
-//         let mut jwt_cert = JwtCert {
-//             exp: Duration::from_secs(1),
-//             val: "".to_string(),
-//         };
-//
-//         let _ = jwt_cert.refresh_data().await;
-//
-//         jwt_cert
-//     }
-//
-//     pub async fn get_cert(&mut self) -> &String {
-//         if let Err(e) = self.refresh().await {
-//             println!("{:?}", e)
-//         }
-//
-//         &self.val
-//     }
-// }
-
-#[derive(Deserialize, Debug)]
-#[allow(dead_code)]
-struct JwtToken {
-    iss: String, // The JWT's issuer
-    nbf: u64,
-    aud: String,          // Your server's client ID
-    sub: String,          // The unique ID of the user's Google Account
-    hd: Option<String>,   // If present, the host domain of the user's GSuite email address
-    email: String,        // The user's email address
-    email_verified: bool, // true, if Google has verified the email address
-    azp: String,
-    name: String,
-    picture: Option<String>, // If present, a URL to user's profile picture
-    given_name: String,
-    family_name: String,
-    iat: u64, // Unix timestamp of the assertion's creation time
-    exp: u64, // Unix timestamp of the assertion's expiration time
-    jti: String,
-}
-
-async fn jwt_decoder(token: &str, jwt_reply: &str) -> AnyResult<TokenData<HashMap<String, Value>>> {
-    let jwks: jwk::JwkSet = serde_json::from_str(jwt_reply)?;
-
-    let header = decode_header(token)?;
-    let kid = match header.kid {
-        Some(k) => k,
-        None => return Err(anyhow!("Token doesn't have a `kid` header field")),
-    };
-    if let Some(j) = jwks.find(&kid) {
-        match &j.algorithm {
-            AlgorithmParameters::RSA(rsa) => {
-                let decoding_key = DecodingKey::from_rsa_components(&rsa.n, &rsa.e)?;
-
-                let mut validation = Validation::new(Algorithm::from_str(
-                    j.common.key_algorithm.unwrap().to_string().as_str(),
-                )?);
-                let aud = std::env::var("GOOGLE_OAUTH_CLIENT_ID")?;
-                validation.set_audience(&[aud]);
-
-                validation.validate_exp = false;
-                let decoded_token = decode::<HashMap<String, serde_json::Value>>(
-                    token,
-                    &decoding_key,
-                    &validation,
-                )?;
-
-                Ok(decoded_token)
-            }
-            _ => Err(anyhow!("This should be a RSA")),
-        }
-    } else {
-        Err(anyhow!("No matching JWK found for the given kid"))
-    }
 }

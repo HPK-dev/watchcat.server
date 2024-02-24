@@ -6,9 +6,7 @@ use actix_cors::Cors;
 use actix_web::middleware::Logger;
 use actix_web::{get, App, HttpServer};
 use actix_web::{web, HttpResponse};
-use dotenv::dotenv;
-use log::{debug, error};
-use routers::{card_login, token_login, user_login};
+use routers::{card_login, token_login};
 use serde::Deserialize;
 use std::env;
 
@@ -31,7 +29,7 @@ fn check_needed_env() -> AnyResult {
             Ok(v) => {
                 println!("    {}: {}", f, v);
             }
-            Err(e) => {
+            Err(_) => {
                 should_crash = true;
                 missing.push(f);
             }
@@ -54,11 +52,11 @@ fn check_needed_env() -> AnyResult {
 
 #[actix_web::main]
 pub async fn main() -> AnyResult {
-    dotenv().ok();
+    env_logger::init();
+
+    dotenvy::dotenv()?;
 
     check_needed_env()?;
-
-    env_logger::init();
 
     let bind_ip = env::var("BIND_IP")?;
     let bind_port: u16 = env::var("BIND_PORT")?.parse()?;
@@ -66,15 +64,19 @@ pub async fn main() -> AnyResult {
     let app_data = web::Data::new(AppData::new().await);
 
     let server = HttpServer::new(move || {
-        // let cors = actix_cors::Cors::default()
-        //     .allowed_methods(vec!["POST"])
-        //     .allow_any_origin()
-        //     .max_age(3600);
+        #[cfg(not(debug_assertions))]
+        let cors = Cors::default()
+            .allowed_methods(vec!["POST"])
+            .allow_any_origin()
+            .max_age(3600);
 
         // WARN: Do not use this in production!!!
+        #[cfg(debug_assertions)]
         let cors = Cors::permissive();
 
         App::new()
+            // App data
+            .app_data(app_data.clone())
             // middleware
             .wrap(Logger::default())
             .wrap(cors)
@@ -83,10 +85,6 @@ pub async fn main() -> AnyResult {
             .service(teapot)
             .service(card_login::main)
             .service(token_login::main)
-            // WARN: This page will be replace with foront-end webpage
-            .service(user_login::main)
-            // App data
-            .app_data(app_data.clone())
     })
     .bind((bind_ip, bind_port))?;
     server.run().await?;

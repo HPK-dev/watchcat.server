@@ -1,15 +1,12 @@
-use crate::routers::token_login::JwtCert;
+use google_oauth::AsyncClient;
 use serde::Deserialize;
 use sqlx::mysql::MySqlPoolOptions;
 use sqlx::MySql;
-use std::collections::HashMap;
-use tokio::sync::Mutex;
 
 #[derive(Debug)]
 pub struct AppData {
-    pub registering_pool: Mutex<Vec<HashMap<String, String>>>,
     pub db_conn: sqlx::Pool<MySql>,
-    pub jwt_cert: Mutex<JwtCert>,
+    pub google_oauth_client: AsyncClient,
 }
 
 impl AppData {
@@ -20,9 +17,8 @@ impl AppData {
 
         match db_conn {
             Ok(db_conn) => AppData {
-                registering_pool: Mutex::new(vec![]),
                 db_conn,
-                jwt_cert: Mutex::new(JwtCert::new().await.unwrap()),
+                google_oauth_client: AsyncClient::new(""),
             },
             Err(e) => {
                 panic!("Cannot initalize database!\nError message:\n{:#?}", e);
