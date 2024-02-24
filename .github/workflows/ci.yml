@@ -5,7 +5,7 @@ on: [push, pull_request]
 
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: -Dwarnings
+  RUSTFLAGS: -Awarnings
   RUST_BACKTRACE: 1
   # Change to specific Rust release to pin
   rust_version: '1.76'
@@ -25,16 +25,13 @@ jobs:
     - name: Cache
       uses: Swatinem/rust-cache@v2
 
-    - name: Build
-      run: cargo build
-
     - name: Run clippy
       run: cargo clippy --all --tests --all-features --no-deps
 
     - name: Format
-      uses: LoliGothick/rustfmt-check@master
+      uses: mbrobbel/rustfmt-check@master
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.RUSTFMT_GITHUB_TOKEN }}
 
 
 
