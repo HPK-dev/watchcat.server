@@ -1,7 +1,6 @@
 use crate::database::{AppData, User};
 use actix_web::cookie::time::Duration as CookieDuration;
 use actix_web::{post, web, HttpRequest, HttpResponse};
-use google_oauth::GoogleAccessTokenPayload;
 use log::debug;
 use serde::Deserialize;
 use sqlx::MySql;

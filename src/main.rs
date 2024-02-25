@@ -6,6 +6,8 @@ use actix_cors::Cors;
 use actix_web::middleware::Logger;
 use actix_web::{get, App, HttpServer};
 use actix_web::{web, HttpResponse};
+use env_logger::Env;
+use log::{debug, error};
 use routers::{card_login, token_login};
 use serde::Deserialize;
 use std::env;
@@ -21,25 +23,23 @@ fn check_needed_env() -> AnyResult {
     ];
 
     let mut missing: Vec<&str> = Vec::new();
-    let mut should_crash = false;
 
-    println!("Checking env vars...");
+    debug!("Checking env vars...");
     for f in REQUIRED_ENV_FIELD {
         match env::var(f) {
             Ok(v) => {
-                println!("    {}: {}", f, v);
+                debug!("    {}: {}", f, v);
             }
             Err(_) => {
-                should_crash = true;
                 missing.push(f);
             }
         }
     }
 
-    if should_crash {
-        println!("Some env var are missing!");
+    if !missing.is_empty() {
+        error!("Some env var are missing!");
         for val in missing {
-            println!("    {:?}", val);
+            error!("    {:?}", val);
         }
 
         return Err(anyhow::anyhow!("missing env vars"));
@@ -52,7 +52,7 @@ fn check_needed_env() -> AnyResult {
 
 #[actix_web::main]
 pub async fn main() -> AnyResult {
-    env_logger::init();
+    env_logger::Builder::from_env(Env::default().default_filter_or("warn")).init();
 
     dotenvy::dotenv()?;
 

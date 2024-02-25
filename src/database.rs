@@ -1,7 +1,14 @@
 use google_oauth::AsyncClient;
+use lazy_static::lazy_static;
+use regex::Regex;
 use serde::Deserialize;
 use sqlx::mysql::MySqlPoolOptions;
 use sqlx::MySql;
+
+lazy_static! {
+    pub static ref RE_CARD_ID: Regex = Regex::new(r"^[a-fA-F0-9]{16}(.)+$").unwrap();
+    pub static ref RE_USER_ID: Regex = Regex::new(r"^[0-9]*$").unwrap();
+}
 
 #[derive(Debug)]
 pub struct AppData {

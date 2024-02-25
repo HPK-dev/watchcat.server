@@ -1,8 +1,7 @@
 use actix_web::{get, web, HttpResponse};
 use futures_util::StreamExt;
-use lazy_static::lazy_static;
 use log::{debug, error};
-use regex::Regex;
+
 use serde::Deserialize;
 use sqlx::MySql;
 use std::{
@@ -10,11 +9,8 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use crate::database::{AppData, Card};
+use crate::database::{AppData, Card, RE_CARD_ID};
 
-lazy_static! {
-    static ref RE_CARD_ID: Regex = Regex::new(r"[a-fA-F0-9]{16}(.)+").unwrap();
-}
 #[derive(Deserialize, Debug)]
 pub struct Info {
     card_id: String,
@@ -33,20 +29,18 @@ pub async fn main(
         return Ok(HttpResponse::BadRequest().into());
     }
 
-    let rows =
-        sqlx::query_as::<MySql, Card>("SELECT id, owner, expire FROM Cards").fetch(&data.db_conn);
+    let rows = sqlx::query_as::<MySql, Card>("SELECT * FROM Cards WHERE id=\"?\"")
+        .bind(&info.card_id)
+        .fetch(&data.db_conn);
 
     match rows
         .any(|val| async {
             if let Err(e) = val {
                 error!("Something went wrong!");
                 error!("{:?}", e);
-                panic!("err!") // WARN: need some investigation
+                panic!("error!") // WARN: need some investigation
             } else {
                 let card = val.unwrap();
-                if card.id != info.card_id {
-                    return false;
-                }
 
                 if card.expire.is_none() {
                     return true;
