@@ -28,7 +28,7 @@ RUN cargo build --release --bin app
 # We do not need the Rust toolchain to run the binary!
 FROM debian:bookworm-slim AS runtime
 WORKDIR /app
-COPY --from=builder /app/target/release/app /usr/local/bin
+COPY --from=builder /app/target/release/watchcat-server /usr/local/bin/app
 
 ENV RUST_LOG info
 
