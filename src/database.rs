@@ -1,7 +1,7 @@
 use google_oauth::AsyncClient;
 use lazy_static::lazy_static;
 use regex::Regex;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sqlx::mysql::MySqlPoolOptions;
 use sqlx::MySql;
 
@@ -40,7 +40,7 @@ pub struct User {
     pub email: String,
 }
 
-#[derive(Deserialize, Debug, sqlx::FromRow)]
+#[derive(Deserialize, Serialize, Debug, sqlx::FromRow)]
 pub struct Card {
     pub expire: Option<chrono::NaiveDateTime>,
     pub id: String,

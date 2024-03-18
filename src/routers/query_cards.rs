@@ -4,14 +4,21 @@ use crate::database::RE_USER_ID;
 use actix_web::post;
 use actix_web::web;
 use actix_web::HttpResponse;
+use futures_util::StreamExt;
 use log::debug;
 use serde::Deserialize;
+use serde::Serialize;
 use sqlx::MySql;
 use std::error::Error;
 
 #[derive(Deserialize, Debug)]
 struct Fields {
     user_id: String,
+}
+
+#[derive(Serialize, Debug)]
+struct Resp {
+    cards: Vec<Card>,
 }
 
 #[post("/fetch_cards")]
@@ -24,9 +31,14 @@ pub async fn main(
         return Ok(HttpResponse::BadRequest().into());
     }
 
-    let rows = sqlx::query_as::<MySql, Card>("SELECT * FROM Cards WHERE id=\"?\"")
+    let mut rows = sqlx::query_as::<MySql, Card>("SELECT * FROM Cards WHERE id=\"?\"")
         .bind(&item.user_id)
         .fetch(&data.db_conn);
 
-    unimplemented!()
+    let mut cards: Vec<Card> = Vec::new();
+    while let Some(card) = rows.next().await {
+        cards.push(card?);
+    }
+
+    Ok(HttpResponse::Ok().json(Resp { cards }))
 }
