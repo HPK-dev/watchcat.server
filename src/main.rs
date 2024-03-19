@@ -7,7 +7,7 @@ use actix_web::middleware::Logger;
 use actix_web::{get, App, HttpServer};
 use actix_web::{web, HttpResponse};
 use env_logger::Env;
-use log::{debug, error};
+use log::{error, info};
 use routers::{card_login, token_login};
 use serde::Deserialize;
 use std::env;
@@ -24,11 +24,11 @@ fn check_needed_env() -> AnyResult {
 
     let mut missing: Vec<&str> = Vec::new();
 
-    debug!("Checking env vars...");
+    info!("Checking env vars...");
     for f in REQUIRED_ENV_FIELD {
         match env::var(f) {
             Ok(v) => {
-                debug!("    {}: {}", f, v);
+                info!("    {}: {}", f, v);
             }
             Err(_) => {
                 missing.push(f);
@@ -52,7 +52,7 @@ fn check_needed_env() -> AnyResult {
 
 #[actix_web::main]
 pub async fn main() -> AnyResult {
-    env_logger::Builder::from_env(Env::default().default_filter_or("warn")).init();
+    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
 
     dotenvy::dotenv()?;
 
