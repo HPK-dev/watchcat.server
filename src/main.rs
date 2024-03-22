@@ -11,6 +11,7 @@ use log::{error, info};
 use routers::{card_login, token_login};
 use serde::Deserialize;
 use std::env;
+use std::io::Write;
 
 type AnyResult<T = ()> = anyhow::Result<T>;
 
@@ -52,7 +53,26 @@ fn check_needed_env() -> AnyResult {
 
 #[actix_web::main]
 pub async fn main() -> AnyResult {
-    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+    let mut builder = env_logger::Builder::from_env(Env::default().default_filter_or("info"));
+
+    let time_style = anstyle::Style::new()
+        .fg_color(Some(anstyle::AnsiColor::Cyan.into()))
+        .bold();
+
+    builder.format(move |buf, record| {
+        let current_time = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
+        let level = buf.default_level_style(record.level());
+
+        writeln!(
+            buf,
+            "[{time_style}{}{time_style:#}][{level}{}{level:#}] {}",
+            current_time,
+            record.level(),
+            record.args()
+        )
+    });
+
+    builder.init();
 
     dotenvy::dotenv()?;
 
