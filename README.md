@@ -18,10 +18,10 @@ chmod +x ./install.sh
 
 1. set following variables  in `.env`
 
-    - "BIND_IP"
-    - "BIND_PORT" 
-    - "GOOGLE_OAUTH_CLIENT_ID" 
-    - "DATABASE_URL" 
+    - `BIND_IP`
+    - `BIND_PORT` 
+    - `GOOGLE_OAUTH_CLIENT_ID` 
+    - `DATABASE_URL` 
 
 2. build in docker
     ```bash
@@ -36,10 +36,10 @@ Ensure you have Rust installed.
 
 1. set following variables  in `.env`
 
-    - "BIND_IP"
-    - "BIND_PORT" 
-    - "GOOGLE_OAUTH_CLIENT_ID" 
-    - "DATABASE_URL" 
+    - `BIND_IP`
+    - `BIND_PORT` 
+    - `GOOGLE_OAUTH_CLIENT_ID` 
+    - `DATABASE_URL` 
 
 2. run
     ```bash

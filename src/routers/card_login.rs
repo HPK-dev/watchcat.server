@@ -35,8 +35,9 @@ pub async fn main(
         return Ok(HttpResponse::BadRequest().into());
     }
 
-    let mut rows = sqlx::query_as::<MySql, Card>("SELECT * FROM Cards WHERE ?=1 AND id=?")
-        .bind(device_mac)
+    // let mut rows = sqlx::query_as::<MySql, Card>("SELECT * FROM Cards WHERE ?=1 AND id=?")
+    let mut rows = sqlx::query_as::<MySql, Card>("SELECT * FROM Cards WHERE AND id=?")
+        // .bind(device_mac)
         .bind(requested_card)
         .fetch(&data.db_conn);
 
@@ -49,11 +50,7 @@ pub async fn main(
 
         let card = card.unwrap();
 
-        if card.expire.is_none() {
-            return Ok(HttpResponse::Ok().finish());
-        }
-
-        let ex = card.expire.unwrap();
+        let ex = card.expire;
 
         let timestamp_ms = SystemTime::now()
             .duration_since(UNIX_EPOCH)

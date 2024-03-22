@@ -43,7 +43,7 @@ pub struct User {
 
 #[derive(Deserialize, Serialize, Debug, sqlx::FromRow)]
 pub struct Card {
-    pub expire: Option<chrono::NaiveDateTime>,
+    pub expire: chrono::NaiveDateTime,
     pub id: String,
     pub owner: String,
 }
