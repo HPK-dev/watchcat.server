@@ -35,8 +35,9 @@ pub async fn main(
         return Ok(HttpResponse::BadRequest().into());
     }
 
-    let mut rows = sqlx::query_as::<MySql, Card>("SELECT * FROM Cards WHERE id=\"?\"")
-        .bind(&info.card_id)
+    let mut rows = sqlx::query_as::<MySql, Card>("SELECT * FROM Cards WHERE ?=1 AND id=?")
+        .bind(device_mac)
+        .bind(requested_card)
         .fetch(&data.db_conn);
 
     while let Some(card) = rows.next().await {
