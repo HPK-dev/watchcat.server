@@ -1,3 +1,4 @@
+use chrono::NaiveDateTime;
 use google_oauth::AsyncClient;
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -6,7 +7,7 @@ use sqlx::mysql::MySqlPoolOptions;
 use sqlx::MySql;
 
 lazy_static! {
-    pub static ref RE_CARD_ID: Regex = Regex::new(r"^[a-fA-F0-9]{16}$").unwrap();
+    pub static ref RE_CARD_ID: Regex = Regex::new(r"^[a-fA-F0-9]{8}$").unwrap();
     pub static ref RE_MAC: Regex = Regex::new(r"[a-fA-F0-9]{2}(:[a-fA-F0-9]{2}){5}").unwrap();
     pub static ref RE_USER_ID: Regex = Regex::new(r"^[0-9]*$").unwrap();
 }
@@ -43,7 +44,7 @@ pub struct User {
 
 #[derive(Deserialize, Serialize, Debug, sqlx::FromRow)]
 pub struct Card {
-    pub expire: chrono::NaiveDateTime,
+    pub expire: Option<NaiveDateTime>,
     pub id: String,
     pub owner: String,
 }

@@ -4,10 +4,7 @@ use log::{debug, error};
 
 use serde::Deserialize;
 use sqlx::MySql;
-use std::{
-    error::Error,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::error::Error;
 
 use crate::database::{AppData, Card, RE_CARD_ID, RE_MAC};
 
@@ -36,7 +33,7 @@ pub async fn main(
     }
 
     // let mut rows = sqlx::query_as::<MySql, Card>("SELECT * FROM Cards WHERE ?=1 AND id=?")
-    let mut rows = sqlx::query_as::<MySql, Card>("SELECT * FROM Cards WHERE AND id=?")
+    let mut rows = sqlx::query_as::<MySql, Card>("SELECT * FROM Cards WHERE id=?")
         // .bind(device_mac)
         .bind(requested_card)
         .fetch(&data.db_conn);
@@ -50,20 +47,14 @@ pub async fn main(
 
         let card = card.unwrap();
 
-        let ex = card.expire;
+        let expire = match card.expire {
+            Some(ex) => ex,
+            None => return Ok(HttpResponse::Ok().finish()),
+        };
 
-        let timestamp_ms = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("Time went backwards")
-            .as_secs();
+        let current = chrono::Local::now().naive_utc();
 
-        let expire_ms: u64 = ex
-            .and_utc()
-            .timestamp_millis()
-            .try_into()
-            .expect("Time went backwards"); // ?? 🤔
-
-        return match expire_ms > timestamp_ms {
+        return match expire > current {
             true => Ok(HttpResponse::Ok().finish()),
             false => continue,
         };
