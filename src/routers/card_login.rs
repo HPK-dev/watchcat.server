@@ -9,7 +9,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use crate::database::{AppData, Card, RE_CARD_ID};
+use crate::database::{AppData, Card, RE_CARD_ID, RE_MAC};
 
 #[derive(Deserialize, Debug)]
 pub struct Info {
@@ -23,47 +23,53 @@ pub async fn main(
     data: web::Data<AppData>,
 ) -> Result<HttpResponse, Box<dyn Error>> {
     let requested_card = &info.card_id;
+    let device_mac = &info.device_mac;
 
     if !RE_CARD_ID.is_match(requested_card) {
         debug!("Invalid card: {}", requested_card);
         return Ok(HttpResponse::BadRequest().into());
     }
 
-    let rows = sqlx::query_as::<MySql, Card>("SELECT * FROM Cards WHERE id=\"?\"")
+    if !RE_MAC.is_match(device_mac) {
+        debug!("Invalid device: {}", device_mac);
+        return Ok(HttpResponse::BadRequest().into());
+    }
+
+    let mut rows = sqlx::query_as::<MySql, Card>("SELECT * FROM Cards WHERE id=\"?\"")
         .bind(&info.card_id)
         .fetch(&data.db_conn);
 
-    match rows
-        .any(|val| async {
-            if let Err(e) = val {
-                error!("Something went wrong!");
-                error!("{:?}", e);
-                panic!("error!") // WARN: need some investigation
-            } else {
-                let card = val.unwrap();
+    while let Some(card) = rows.next().await {
+        if let Err(e) = card {
+            error!("Something went wrong!");
+            error!("{:?}", e);
+            return Ok(HttpResponse::InternalServerError().finish()); // WARN: need some investigation
+        }
 
-                if card.expire.is_none() {
-                    return true;
-                }
+        let card = card.unwrap();
 
-                let ex = card.expire.unwrap();
+        if card.expire.is_none() {
+            return Ok(HttpResponse::Ok().finish());
+        }
 
-                let timestamp_ms = SystemTime::now()
-                    .duration_since(UNIX_EPOCH)
-                    .expect("Time went backwards")
-                    .as_secs();
+        let ex = card.expire.unwrap();
 
-                let expire_ms: u64 = ex
-                    .timestamp_millis()
-                    .try_into()
-                    .expect("Time went backwards"); // ?? 🤔
+        let timestamp_ms = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("Time went backwards")
+            .as_secs();
 
-                expire_ms > timestamp_ms
-            }
-        })
-        .await
-    {
-        true => Ok(HttpResponse::Ok().finish()),
-        false => Ok(HttpResponse::Forbidden().finish()),
+        let expire_ms: u64 = ex
+            .and_utc()
+            .timestamp_millis()
+            .try_into()
+            .expect("Time went backwards"); // ?? 🤔
+
+        return match expire_ms > timestamp_ms {
+            true => Ok(HttpResponse::Ok().finish()),
+            false => continue,
+        };
     }
+
+    Ok(HttpResponse::Forbidden().finish())
 }
