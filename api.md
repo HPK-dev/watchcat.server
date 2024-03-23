@@ -4,21 +4,22 @@
 
 | method | route | args | desc |
 |---|---|---|---|
-| GET | `/card_login` | `card_id` => card id | Check if this card can be approved |
-| POST | `/token_login` | private/unknown ( ask Google ) | Google login callback |
+| GET | `/card_login` | `card_id`: ID of card <br/> `device_mac`: MAC of card reader | Check if this card can be approved |
+| POST | `/token_login` | `access_token`: Access token for Google OAuth authentication | Google login callback |
 
 ## Database
 
 ### table `Cards`
-| key | desc |
-|---|---|
-| id | primary key, store each card |
-| owner | the card owner |
+| key | type | desc |
+|-----|------|------|
+| id | char(8) PRIMARY KEY | the unique card id |
+| owner | text | the card owner |
+| expire | DATETIME | card expired time |
 
 ### table `Users`
 
-| key | desc |
-|---|---|
-|  id | primary key, the unique user id |
-| email | this user's email |
-| expire | card expired time |
+| key | type | desc |
+|-----|------|------|
+| id | text |  the user id |
+| email | text | this user's email |
+
