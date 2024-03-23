@@ -14,7 +14,7 @@
 |-----|------|------|
 | id | char(8) PRIMARY KEY | the unique card id |
 | owner | text | the card owner |
-| expire | DATETIME | card expired time |
+| expire | DATETIME (No timezone offset)| card expired time |
 
 ### table `Users`
 
