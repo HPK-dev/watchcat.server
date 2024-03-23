@@ -36,12 +36,21 @@ impl AppData {
     }
 }
 
+// CREATE TABLE Users (
+//     id text,
+//     email text
+// );
 #[derive(Deserialize, Debug, sqlx::FromRow)]
 pub struct User {
     pub id: String,
     pub email: String,
 }
 
+// CREATE TABLE Cards (
+//   expire DATETIME NULL,
+//   owner text,
+//   id char(8) PRIMARY KEY NOT NULL
+// );
 #[derive(Deserialize, Serialize, Debug, sqlx::FromRow)]
 pub struct Card {
     pub expire: Option<NaiveDateTime>,

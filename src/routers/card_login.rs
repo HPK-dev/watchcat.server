@@ -1,4 +1,5 @@
 use actix_web::{get, web, HttpResponse};
+use chrono::FixedOffset;
 use futures_util::StreamExt;
 use log::{debug, error};
 
@@ -48,11 +49,14 @@ pub async fn main(
         let card = card.unwrap();
 
         let expire = match card.expire {
-            Some(ex) => ex,
+            Some(ex) => ex.and_utc(),
             None => return Ok(HttpResponse::Ok().finish()),
         };
 
-        let current = chrono::Local::now().naive_utc();
+        let current = chrono::Utc::now();
+
+        debug!("CUR: {:?}", current);
+        debug!("EXP: {:?}", expire);
 
         return match expire > current {
             true => Ok(HttpResponse::Ok().finish()),
