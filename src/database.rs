@@ -46,6 +46,9 @@ pub struct User {
     pub email: String,
 }
 
+// IMPORTANT: All time fields are in UTC+0 ( NO TIMEZONE OFFSET!!!)
+// Also, the definition of NaiveDateTime is 'ISO 8601 combined date and time without timezone'.
+//
 // CREATE TABLE Cards (
 //   expire DATETIME NULL,
 //   owner text,
@@ -56,4 +59,33 @@ pub struct Card {
     pub expire: Option<NaiveDateTime>,
     pub id: String,
     pub owner: String,
+}
+
+// IMPORTANT: All time fields are in UTC+0 ( NO TIMEZONE OFFSET!!! )
+// Also, the definition of NaiveDateTime is 'ISO 8601 combined date and time without timezone'.
+//
+// CREATE TABLE Reservations (
+//    room_id text NOT NULL,
+//    user_id text NOT NULL,
+//    description LONGTEXT NULL,
+//    begins DATETIME NOT NULL,
+//    ends DATETIME NOT NULL
+//    );
+#[derive(Deserialize, Serialize, Debug, sqlx::FromRow)]
+pub struct Reservation {
+    pub room_id: String,
+    pub user_id: String,
+    pub description: Option<String>,
+    pub begins: NaiveDateTime,
+    pub ends: NaiveDateTime,
+}
+
+// CREATE TABLE Rooms (
+//   room_id text NOT NULL,
+//   device_mac char(12) PRIMARY KEY NOT NULL
+//   );
+#[derive(Deserialize, Serialize, Debug, sqlx::FromRow)]
+pub struct Room {
+    pub room_id: String,
+    pub device_mac: String,
 }

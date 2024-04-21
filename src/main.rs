@@ -8,7 +8,7 @@ use actix_web::{get, App, HttpServer};
 use actix_web::{web, HttpResponse};
 use env_logger::Env;
 use log::{error, info};
-use routers::{card_login, token_login};
+use routers::{card_login, reserve, token_login};
 use serde::Deserialize;
 use std::env;
 use std::io::Write;
@@ -105,6 +105,8 @@ pub async fn main() -> AnyResult {
             .service(teapot)
             .service(card_login::main)
             .service(token_login::main)
+            .service(reserve::main_post)
+            .service(reserve::main_get)
     })
     .bind((bind_ip, bind_port))?;
     server.run().await?;
