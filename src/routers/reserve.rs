@@ -31,7 +31,7 @@ pub struct PostRequest {
 
 #[post("/reserve")]
 pub async fn main_post(
-    info: web::Query<PostRequest>,
+    info: web::Json<PostRequest>,
     data: web::Data<AppData>,
 ) -> Result<HttpResponse, Box<dyn Error>> {
     let room_id = &info.room_id;
