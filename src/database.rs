@@ -65,19 +65,23 @@ pub struct Card {
 // Also, the definition of NaiveDateTime is 'ISO 8601 combined date and time without timezone'.
 //
 // CREATE TABLE Reservations (
+//    reservation_id INT AUTO_INCREMENT PRIMARY KEY,
 //    room_id text NOT NULL,
 //    user_id text NOT NULL,
 //    description LONGTEXT NULL,
 //    begins DATETIME NOT NULL,
-//    ends DATETIME NOT NULL
+//    ends DATETIME NOT NULL,
+//    approval_pending BOOLEAN DEFAULT TRUE
 //    );
 #[derive(Deserialize, Serialize, Debug, sqlx::FromRow)]
 pub struct Reservation {
+    pub reservation_id: i32,
     pub room_id: String,
     pub user_id: String,
     pub description: Option<String>,
     pub begins: NaiveDateTime,
     pub ends: NaiveDateTime,
+    pub approval_pending: bool,
 }
 
 // CREATE TABLE Rooms (

@@ -52,9 +52,9 @@ pub async fn main(
     // Get current time
     let current: NaiveDateTime = chrono::Utc::now().naive_local();
 
-    // Check if there is a reservation
+    // Check if there is a reservation and it is approved
     let rows = sqlx::query_as::<MySql, Reservation>(
-        "SELECT * FROM Reservations WHERE room_id = ? AND begin >= ? AND ends <= ? ",
+        "SELECT * FROM Reservations WHERE room_id = ? AND approval_pending IS FALSE AND begin >= ? AND ends <= ? ",
     )
     .bind(room_id)
     .bind(current)
@@ -67,10 +67,12 @@ pub async fn main(
     }
 
     // Check if the card is existing and not expired
-    let rows = sqlx::query_as::<MySql, Card>("SELECT * FROM Cards WHERE id = ? AND ( expire is NULL OR expire >= ? )")
-        .bind(requested_card)
-        .bind(current)
-        .fetch(&data.db_conn);
+    let rows = sqlx::query_as::<MySql, Card>(
+        "SELECT * FROM Cards WHERE id = ? AND ( expire is NULL OR expire >= ? )",
+    )
+    .bind(requested_card)
+    .bind(current)
+    .fetch(&data.db_conn);
 
     // No valid card, return 403
     if rows.try_collect::<Vec<Card>>().await?.is_empty() {

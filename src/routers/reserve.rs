@@ -1,4 +1,4 @@
-use actix_web::{get, post, web, HttpResponse};
+use actix_web::{delete, get, patch, put, web, HttpResponse};
 use chrono::NaiveDateTime;
 use futures_util::{StreamExt, TryStreamExt};
 use log::error;
@@ -10,8 +10,7 @@ use std::error::Error;
 use crate::database::{AppData, Reservation};
 
 #[derive(Deserialize, Debug)]
-#[allow(non_snake_case)]
-pub struct PostRequest {
+pub struct PutRequest {
     room_id: String,
     user_id: String,
     description: String,
@@ -20,18 +19,36 @@ pub struct PostRequest {
     ends: String,
 }
 
-// #[derive(Deserialize, Debug)]
-// #[allow(non_snake_case)]
-// pub struct GetRequest {
-//     room_id: Option<String>,
-//     user_id: Option<String>,
-//     begin: Option<String>,
-//     ends: Option<String>,
-// }
+#[derive(Deserialize, Debug)]
+pub struct GetRequest {
+    room_id: Option<String>,
+    user_id: Option<String>,
+    begin: Option<String>,
+    ends: Option<String>,
+    approval_pending: Option<bool>,
+    description: Option<String>,
+}
 
-#[post("/reserve")]
-pub async fn main_post(
-    info: web::Json<PostRequest>,
+#[derive(Deserialize, Debug)]
+pub struct PatchRequest {
+    reservation_id: i32,
+    room_id: Option<String>,
+    user_id: Option<String>,
+    begin: Option<String>,
+    ends: Option<String>,
+    approval_pending: Option<bool>,
+    description: Option<String>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct DeleteRequest {
+    reservation_id: String,
+}
+
+// Reserve a room
+#[put("/reserve")]
+pub async fn main_put(
+    info: web::Json<PutRequest>,
     data: web::Data<AppData>,
 ) -> Result<HttpResponse, Box<dyn Error>> {
     let room_id = &info.room_id;
@@ -47,18 +64,8 @@ pub async fn main_post(
         Err(_) => return Ok(HttpResponse::BadRequest().finish()),
     };
 
-    // Check if the room is available
-    let rows = sqlx::query_as::<MySql, Reservation>("SELECT * FROM Reservations WHERE room_id=? AND (begins BETWEEN ? AND ? OR ends BETWEEN ? AND ?)")
-        .bind(room_id)
-        .bind(begins)
-        .bind(ends)
-        .bind(begins)
-        .bind(ends)
-        .fetch(&data.db_conn);
-
-    if rows.try_collect::<Vec<Reservation>>().await?.is_empty() {
-        // Insert the reservation
-        sqlx::query("INSERT INTO Reservations (room_id, user_id, description, begins, ends) VALUES (?, ?, ?, ?, ?)")
+    // Insert the reservation
+    sqlx::query("INSERT INTO Reservations (room_id, user_id, description, begins, ends) VALUES (?, ?, ?, ?, ?)")
             .bind(room_id)
             .bind(user_id)
             .bind(description)
@@ -67,20 +74,60 @@ pub async fn main_post(
             .execute(&data.db_conn)
             .await?;
 
-        Ok(HttpResponse::Ok().finish())
-    } else {
-        Ok(HttpResponse::Conflict().finish())
-    }
+    Ok(HttpResponse::Ok().finish())
 }
 
-// Return all reservations
+// Return reservations
 #[get("/reserve")]
-pub async fn main_get(data: web::Data<AppData>) -> Result<HttpResponse, Box<dyn Error>> {
-    let rows =
-        sqlx::query_as::<MySql, Reservation>("SELECT * FROM Reservations").fetch(&data.db_conn);
+pub async fn main_get(
+    info: web::Json<GetRequest>,
+    data: web::Data<AppData>,
+) -> Result<HttpResponse, Box<dyn Error>> {
+    let mut query = "SELECT * FROM Reservations WHERE ".to_string();
+    let mut params: Vec<String> = Vec::new();
+
+    // Check if the room_id is provided
+    if let Some(room_id) = &info.room_id {
+        query.push_str("room_id=? AND ");
+        params.push(room_id.to_string());
+    }
+
+    // Check if the user_id is provided
+    if let Some(user_id) = &info.user_id {
+        query.push_str("user_id=? AND ");
+        params.push(user_id.to_string());
+    }
+
+    // Check if the begin is provided
+    if let Some(begin) = &info.begin {
+        query.push_str("begins=? AND ");
+        params.push(begin.to_string());
+    }
+
+    // Check if the ends is provided
+    if let Some(ends) = &info.ends {
+        query.push_str("ends=? AND ");
+        params.push(ends.to_string());
+    }
+
+    // Check if the approval_pending is provided
+    if let Some(approval_pending) = &info.approval_pending {
+        query.push_str("approval_pending=? AND ");
+        params.push(approval_pending.to_string());
+    }
+
+    // Remove the last AND
+    query.pop();
+    query.pop();
+    query.pop();
+    query.pop();
+
+    // Execute the query
+    let rows = sqlx::query_as::<MySql, Reservation>(&query);
+    let rows = params.iter().fold(rows, |rows, p| rows.bind(p));
+    let mut rows = rows.fetch(&data.db_conn);
 
     let mut result = Vec::new();
-    let mut rows = rows;
 
     while let Some(reservation) = rows.next().await {
         if let Err(e) = reservation {
@@ -90,8 +137,129 @@ pub async fn main_get(data: web::Data<AppData>) -> Result<HttpResponse, Box<dyn 
         }
 
         let reservation = reservation.unwrap();
+
+        // Check if the description is provided
+        if let Some(description) = &info.description {
+            // If the description is not in the reservation, skip it
+            match &reservation.description {
+                Some(v) => {
+                    if !v.contains(description) {
+                        continue;
+                    }
+                }
+                None => continue,
+            }
+        }
+
         result.push(reservation);
     }
 
     Ok(HttpResponse::Ok().json(result))
+}
+
+// Update a reservation
+#[patch("/reserve")]
+pub async fn main_patch(
+    info: web::Json<PatchRequest>,
+    data: web::Data<AppData>,
+) -> Result<HttpResponse, Box<dyn Error>> {
+    // Try to get the reservation first
+    let mut rows =
+        sqlx::query_as::<MySql, Reservation>("SELECT * FROM Reservations WHERE reservation_id=?")
+            .bind(info.reservation_id)
+            .fetch(&data.db_conn);
+
+    let reservation = match rows.try_next().await {
+        Ok(Some(v)) => v,
+        Ok(None) => return Ok(HttpResponse::NotFound().finish()),
+        Err(e) => {
+            error!("Something went wrong!");
+            error!("{:?}", e);
+            return Ok(HttpResponse::InternalServerError().finish());
+        }
+    };
+
+    // Build the new reservation
+    let new_reservation = Reservation {
+        reservation_id: info.reservation_id,
+        room_id: info.room_id.clone().unwrap_or(reservation.room_id),
+        user_id: info.user_id.clone().unwrap_or(reservation.user_id),
+        description: match &info.description {
+            Some(v) => Some(v.to_string()),
+            None => reservation.description,
+        },
+        begins: match &info.begin {
+            Some(v) => match NaiveDateTime::parse_from_str(v, "%Y-%m-%d %H:%M") {
+                Ok(v) => v,
+                Err(_) => return Ok(HttpResponse::BadRequest().finish()),
+            },
+            None => reservation.begins,
+        },
+        ends: match &info.ends {
+            Some(v) => match NaiveDateTime::parse_from_str(v, "%Y-%m-%d %H:%M") {
+                Ok(v) => v,
+                Err(_) => return Ok(HttpResponse::BadRequest().finish()),
+            },
+            None => reservation.ends,
+        },
+        approval_pending: info
+            .approval_pending
+            .unwrap_or(reservation.approval_pending),
+    };
+
+    // If the room meets the following conditions, consider it conflict:
+    // 1. The reservation_id is not the same as the new reservation
+    // 2. The room_id is the same as the new reservation
+    // 3. The approval_pending is false
+    // 4-1. The new reservation begins between the existing reservation
+    //    (old begins <= new begins <= old ends)
+    // 4-2. The new reservation ends between the existing reservation
+    //    (old begins <= new ends <= old ends)
+    let rows = sqlx::query_as::<MySql, Reservation>(
+        "
+        SELECT * 
+        FROM Reservations 
+        WHERE reservation_id != ? 
+          AND room_id = ? 
+          AND approval_pending = FALSE 
+          AND (begins <= ? AND ends >= ?)
+        ",
+    )
+    .bind(new_reservation.reservation_id)
+    .bind(new_reservation.room_id.clone())
+    .bind(new_reservation.ends)
+    .bind(new_reservation.begins)
+    .fetch(&data.db_conn);
+
+    if rows.try_collect::<Vec<Reservation>>().await?.is_empty() {
+        // Update the reservation
+        sqlx::query("UPDATE Reservations SET room_id=?, user_id=?, description=?, begins=?, ends=?, approval_pending=? WHERE reservation_id=?")
+            .bind(new_reservation.room_id)
+            .bind(new_reservation.user_id)
+            .bind(new_reservation.description)
+            .bind(new_reservation.begins)
+            .bind(new_reservation.ends)
+            .bind(new_reservation.approval_pending)
+            .bind(new_reservation.reservation_id)
+            .execute(&data.db_conn)
+            .await?;
+
+        Ok(HttpResponse::Ok().finish())
+    } else {
+        Ok(HttpResponse::Conflict().finish())
+    }
+}
+
+// Delete a reservation
+#[delete("/reserve")]
+pub async fn main_delete(
+    info: web::Json<DeleteRequest>,
+    data: web::Data<AppData>,
+) -> Result<HttpResponse, Box<dyn Error>> {
+    sqlx::query("DELETE FROM Reservations WHERE reservation_id=?")
+        .bind(info.reservation_id.to_string())
+        .execute(&data.db_conn)
+        .await?;
+
+    Ok(HttpResponse::Ok().finish())
 }

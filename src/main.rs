@@ -105,8 +105,10 @@ pub async fn main() -> AnyResult {
             .service(teapot)
             .service(card_login::main)
             .service(token_login::main)
-            .service(reserve::main_post)
+            .service(reserve::main_put)
             .service(reserve::main_get)
+            .service(reserve::main_patch)
+            .service(reserve::main_delete)
     })
     .bind((bind_ip, bind_port))?;
     server.run().await?;
