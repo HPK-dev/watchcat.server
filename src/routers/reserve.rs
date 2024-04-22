@@ -48,7 +48,7 @@ pub async fn main_post(
     };
 
     // Check if the room is available
-    let rows = sqlx::query_as::<MySql, Reservation>("SELECT * FROM Reservations WHERE room_id=? AND (begin BETWEEN ? AND ? OR ends BETWEEN ? AND ?)")
+    let rows = sqlx::query_as::<MySql, Reservation>("SELECT * FROM Reservations WHERE room_id=? AND (begins BETWEEN ? AND ? OR ends BETWEEN ? AND ?)")
         .bind(room_id)
         .bind(begins)
         .bind(ends)
