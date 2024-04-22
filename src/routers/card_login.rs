@@ -67,7 +67,7 @@ pub async fn main(
     }
 
     // Check if the card is existing and not expired
-    let rows = sqlx::query_as::<MySql, Card>("SELECT * FROM Cards WHERE id = ? AND expire >= ?")
+    let rows = sqlx::query_as::<MySql, Card>("SELECT * FROM Cards WHERE id = ? AND ( expire is NULL OR expire >= ? )")
         .bind(requested_card)
         .bind(current)
         .fetch(&data.db_conn);
