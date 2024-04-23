@@ -53,6 +53,9 @@ fn check_needed_env() -> AnyResult {
 
 #[actix_web::main]
 pub async fn main() -> AnyResult {
+    #[cfg(debug_assertions)]
+    let mut builder = env_logger::Builder::from_env(Env::default().default_filter_or("debug"));
+    #[cfg(not(debug_assertions))]
     let mut builder = env_logger::Builder::from_env(Env::default().default_filter_or("info"));
 
     let time_style = anstyle::Style::new()
