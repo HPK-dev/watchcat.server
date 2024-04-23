@@ -38,13 +38,13 @@
 
 ### `/reserve` **GET**
 
-- **Optional Arguments:**
-  - `room_id` (String)
-  - `user_id` (String)
-  - `begin` (String)
-  - `ends` (String)
-  - `approval_pending` (Boolean)
-  - `description` (String)
+- **Arguments:**
+  - `room_id` (String) *(Optional)*
+  - `user_id` (String) *(Optional)*
+  - `begin` (String) *(Optional)*
+  - `ends` (String) *(Optional)*
+  - `approval_pending` (Boolean) *(Optional)*
+  - `description` (String) *(Optional)*
 - **Description:**  
   Retrieves reservations from the database based on the provided filters.  
   Returns `200 OK` a JSON array of reservation objects matching the specified criteria.
