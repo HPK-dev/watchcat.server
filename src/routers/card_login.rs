@@ -50,7 +50,8 @@ pub async fn main(
     };
 
     // Get current time
-    let current: NaiveDateTime = chrono::Utc::now().naive_local();
+    let current = chrono::Utc::now();
+    debug!("Current time: {}", current);
 
     // Check if there is a reservation and it is approved
     let rows = sqlx::query_as::<MySql, Reservation>(
