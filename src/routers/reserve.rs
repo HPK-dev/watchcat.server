@@ -118,14 +118,10 @@ pub async fn main_get(
 
     // If params is empty, remove the last WHERE
     if params.is_empty() {
-        for _ in 0..6 {
-            query.pop();
-        }
+        query.drain(query.len() - 6..query.len());
     } else {
         // Remove the last AND
-        for _ in 0..4 {
-            query.pop();
-        }
+        query.drain(query.len() - 4..query.len());
     }
 
     // Execute the query
