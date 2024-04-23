@@ -97,7 +97,7 @@ pub async fn main_get(
     let mut query = "
     SELECT Reservations.reservation_id,
            Reservations.room_id,
-           Users.username,
+           Users.name,
            Reservations.description,
            Reservations.begins,
            Reservations.ends,
