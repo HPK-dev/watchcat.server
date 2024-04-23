@@ -37,13 +37,15 @@ impl AppData {
 }
 
 // CREATE TABLE Users (
-//     id text,
-//     email text
+//     id text NOT NULL,
+//     email text,
+//     name text
 // );
 #[derive(Deserialize, Debug, sqlx::FromRow)]
 pub struct User {
     pub id: String,
     pub email: String,
+    pub name: String,
 }
 
 // IMPORTANT: All time fields are in UTC+0 ( NO TIMEZONE OFFSET!!!)

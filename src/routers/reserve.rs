@@ -3,7 +3,7 @@ use chrono::NaiveDateTime;
 use futures_util::{StreamExt, TryStreamExt};
 use log::error;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sqlx::MySql;
 use std::error::Error;
 
@@ -27,6 +27,17 @@ pub struct GetRequest {
     ends: Option<String>,
     approval_pending: Option<bool>,
     description: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, sqlx::FromRow)]
+pub struct GetResponse {
+    reservation_id: i32,
+    room_id: String,
+    username: String,
+    description: Option<String>,
+    begins: NaiveDateTime,
+    ends: NaiveDateTime,
+    approval_pending: bool,
 }
 
 #[derive(Deserialize, Debug)]
@@ -83,7 +94,20 @@ pub async fn main_get(
     info: web::Query<GetRequest>,
     data: web::Data<AppData>,
 ) -> Result<HttpResponse, Box<dyn Error>> {
-    let mut query = "SELECT * FROM Reservations WHERE ".to_string();
+    let mut query = "
+    SELECT Reservations.reservation_id,
+           Reservations.room_id,
+           Users.username,
+           Reservations.description,
+           Reservations.begins,
+           Reservations.ends,
+           Reservations.approval_pending
+    FROM Reservations
+    INNER JOIN Users ON Reservations.user_id=Users.id
+    WHERE 
+"
+    .to_string();
+
     let mut params: Vec<String> = Vec::new();
 
     // Check if the room_id is provided
@@ -125,7 +149,7 @@ pub async fn main_get(
     }
 
     // Execute the query
-    let rows = sqlx::query_as::<MySql, Reservation>(&query);
+    let rows = sqlx::query_as::<MySql, GetResponse>(&query);
     let rows = params.iter().fold(rows, |rows, p| rows.bind(p));
     let mut rows = rows.fetch(&data.db_conn);
 

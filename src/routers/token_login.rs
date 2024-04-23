@@ -36,6 +36,7 @@ pub async fn main(
 
     let id = payload.sub;
     let email = payload.email;
+    let username = payload.name;
 
     // Build hash with posted data and current time
     let mut s = DefaultHasher::new();
@@ -53,9 +54,10 @@ pub async fn main(
 
     //This user doesn't register yet
     if !rows.into_iter().any(|v| v.id == id) {
-        let _ = sqlx::query("INSERT INTO Users (id, email) VALUES (?, ?)")
+        let _ = sqlx::query("INSERT INTO Users (id, email, name) VALUES (?, ?, ?)")
             .bind(id)
             .bind(email)
+            .bind(username)
             .execute(&data.db_conn)
             .await?;
     }
