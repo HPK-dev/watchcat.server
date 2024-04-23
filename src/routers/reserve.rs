@@ -53,7 +53,7 @@ pub struct PatchRequest {
 
 #[derive(Deserialize, Debug)]
 pub struct DeleteRequest {
-    reservation_id: String,
+    reservation_id: i32,
 }
 
 // Reserve a room
