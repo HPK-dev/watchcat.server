@@ -23,7 +23,7 @@ pub struct PutRequest {
 pub struct GetRequest {
     room_id: Option<String>,
     user_id: Option<String>,
-    begin: Option<String>,
+    begins: Option<String>,
     ends: Option<String>,
     approval_pending: Option<bool>,
     description: Option<String>,
@@ -45,7 +45,7 @@ pub struct PatchRequest {
     reservation_id: i32,
     room_id: Option<String>,
     user_id: Option<String>,
-    begin: Option<String>,
+    begins: Option<String>,
     ends: Option<String>,
     approval_pending: Option<bool>,
     description: Option<String>,
@@ -122,7 +122,7 @@ pub async fn main_get(
     }
 
     // Check if the begin is provided
-    if let Some(begin) = &info.begin {
+    if let Some(begin) = &info.begins {
         query.push_str("begins=? AND ");
         params.push(begin.to_string());
     }
@@ -212,7 +212,7 @@ pub async fn main_patch(
     // If all fields are None, return BadRequest
     if info.room_id.is_none()
         && info.user_id.is_none()
-        && info.begin.is_none()
+        && info.begins.is_none()
         && info.ends.is_none()
         && info.approval_pending.is_none()
         && info.description.is_none()
@@ -228,7 +228,7 @@ pub async fn main_patch(
         Some(v) => Some(v.to_string()),
         None => reservation.description,
     };
-    let begins = match &info.begin {
+    let begins = match &info.begins {
         Some(v) => match NaiveDateTime::parse_from_str(v, "%Y-%m-%d %H:%M") {
             Ok(v) => v,
             Err(_) => return Ok(HttpResponse::BadRequest().finish()),

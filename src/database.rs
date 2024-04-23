@@ -88,7 +88,7 @@ pub struct Reservation {
 
 // CREATE TABLE Rooms (
 //   room_id text NOT NULL,
-//   device_mac char(12) PRIMARY KEY NOT NULL
+//   device_mac char(17) PRIMARY KEY NOT NULL
 //   );
 #[derive(Deserialize, Serialize, Debug, sqlx::FromRow)]
 pub struct Room {

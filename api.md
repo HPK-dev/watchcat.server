@@ -41,7 +41,7 @@
 - **Arguments:**
   - `room_id` (String) *(Optional)*
   - `user_id` (String) *(Optional)*
-  - `begin` (String) *(Optional)*
+  - `begins` (String) *(Optional)*
   - `ends` (String) *(Optional)*
   - `approval_pending` (Boolean) *(Optional)*
   - `description` (String) *(Optional)*
@@ -56,7 +56,7 @@
   - `reservation_id` (Integer)
   - `room_id` (String) *(Optional)*
   - `user_id` (String) *(Optional)*
-  - `begin` (String) *(Optional)*
+  - `begins` (String) *(Optional)*
   - `ends` (String) *(Optional)*
   - `approval_pending` (Boolean) *(Optional)*
   - `description` (String) *(Optional)*
