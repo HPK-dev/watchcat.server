@@ -74,7 +74,7 @@ pub async fn main_put(
             .execute(&data.db_conn)
             .await?;
 
-    Ok(HttpResponse::Ok().finish())
+    Ok(HttpResponse::Created().finish())
 }
 
 // Return reservations
@@ -185,33 +185,42 @@ pub async fn main_patch(
         }
     };
 
-    // Build the new reservation
-    let new_reservation = Reservation {
-        reservation_id: info.reservation_id,
-        room_id: info.room_id.clone().unwrap_or(reservation.room_id),
-        user_id: info.user_id.clone().unwrap_or(reservation.user_id),
-        description: match &info.description {
-            Some(v) => Some(v.to_string()),
-            None => reservation.description,
-        },
-        begins: match &info.begin {
-            Some(v) => match NaiveDateTime::parse_from_str(v, "%Y-%m-%d %H:%M") {
-                Ok(v) => v,
-                Err(_) => return Ok(HttpResponse::BadRequest().finish()),
-            },
-            None => reservation.begins,
-        },
-        ends: match &info.ends {
-            Some(v) => match NaiveDateTime::parse_from_str(v, "%Y-%m-%d %H:%M") {
-                Ok(v) => v,
-                Err(_) => return Ok(HttpResponse::BadRequest().finish()),
-            },
-            None => reservation.ends,
-        },
-        approval_pending: info
-            .approval_pending
-            .unwrap_or(reservation.approval_pending),
+    // If all fields are None, return BadRequest
+    if info.room_id.is_none()
+        && info.user_id.is_none()
+        && info.begin.is_none()
+        && info.ends.is_none()
+        && info.approval_pending.is_none()
+        && info.description.is_none()
+    {
+        return Ok(HttpResponse::BadRequest().finish());
+    }
+
+    // The new reservation
+    let reservation_id = info.reservation_id;
+    let room_id = info.room_id.clone().unwrap_or(reservation.room_id);
+    let user_id = info.user_id.clone().unwrap_or(reservation.user_id);
+    let description = match &info.description {
+        Some(v) => Some(v.to_string()),
+        None => reservation.description,
     };
+    let begins = match &info.begin {
+        Some(v) => match NaiveDateTime::parse_from_str(v, "%Y-%m-%d %H:%M") {
+            Ok(v) => v,
+            Err(_) => return Ok(HttpResponse::BadRequest().finish()),
+        },
+        None => reservation.begins,
+    };
+    let ends = match &info.ends {
+        Some(v) => match NaiveDateTime::parse_from_str(v, "%Y-%m-%d %H:%M") {
+            Ok(v) => v,
+            Err(_) => return Ok(HttpResponse::BadRequest().finish()),
+        },
+        None => reservation.ends,
+    };
+    let approval_pending = info
+        .approval_pending
+        .unwrap_or(reservation.approval_pending);
 
     // If the room meets the following conditions, consider it conflict:
     // 1. The reservation_id is not the same as the new reservation
@@ -231,22 +240,22 @@ pub async fn main_patch(
           AND (begins <= ? AND ends >= ?)
         ",
     )
-    .bind(new_reservation.reservation_id)
-    .bind(new_reservation.room_id.clone())
-    .bind(new_reservation.ends)
-    .bind(new_reservation.begins)
+    .bind(reservation_id)
+    .bind(room_id.clone())
+    .bind(ends)
+    .bind(begins)
     .fetch(&data.db_conn);
 
     if rows.try_collect::<Vec<Reservation>>().await?.is_empty() {
         // Update the reservation
         sqlx::query("UPDATE Reservations SET room_id=?, user_id=?, description=?, begins=?, ends=?, approval_pending=? WHERE reservation_id=?")
-            .bind(new_reservation.room_id)
-            .bind(new_reservation.user_id)
-            .bind(new_reservation.description)
-            .bind(new_reservation.begins)
-            .bind(new_reservation.ends)
-            .bind(new_reservation.approval_pending)
-            .bind(new_reservation.reservation_id)
+            .bind(room_id)
+            .bind(user_id)
+            .bind(description)
+            .bind(begins)
+            .bind(ends)
+            .bind(approval_pending)
+            .bind(reservation_id)
             .execute(&data.db_conn)
             .await?;
 
@@ -267,5 +276,5 @@ pub async fn main_delete(
         .execute(&data.db_conn)
         .await?;
 
-    Ok(HttpResponse::Ok().finish())
+    Ok(HttpResponse::NoContent().finish())
 }

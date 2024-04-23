@@ -26,7 +26,7 @@
   - `ends` (String)
 - **Description:**  
   Creates a new reservation in the database for a specified room and user within a specified time range.  
-  Returns `200 OK` if the reservation is successful.
+  Returns `201 Created` if the reservation is successful.
 
 ### `/reserve` **GET**
 
@@ -41,7 +41,7 @@
   Retrieves reservations from the database based on the provided filters.  
   Returns `200 OK` a JSON array of reservation objects matching the specified criteria.
 
-### `/reserve` **POST**
+### `/reserve` **PATCH**
 
 - **Arguments:**
   - `reservation_id` (Integer)
@@ -52,7 +52,8 @@
   - `approval_pending` (Boolean) *(Optional)*
   - `description` (String) *(Optional)*
 - **Description:**  
-  Updates an existing reservation in the database with the provided fields.   
+  Updates an existing reservation in the database with the provided fields.  
+  If all fields are `null`, returns `400 Bad Request`.
   Checks for conflicts with other reservations and returns `409 Conflict` if detected. Returns `200 OK` if successful.
 
 
@@ -62,4 +63,4 @@
   - `reservation_id` (String)
 - **Description:**  
   Deletes the reservation with the specified ID from the database.  
-  Returns `200 OK` if the deletion is successful.
+  Returns `204 No Content` if the deletion is successful.
