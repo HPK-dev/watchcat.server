@@ -80,7 +80,7 @@ pub async fn main_put(
 // Return reservations
 #[get("/reserve")]
 pub async fn main_get(
-    info: web::Json<GetRequest>,
+    info: web::Query<GetRequest>,
     data: web::Data<AppData>,
 ) -> Result<HttpResponse, Box<dyn Error>> {
     let mut query = "SELECT * FROM Reservations WHERE ".to_string();
@@ -116,11 +116,17 @@ pub async fn main_get(
         params.push(approval_pending.to_string());
     }
 
-    // Remove the last AND
-    query.pop();
-    query.pop();
-    query.pop();
-    query.pop();
+    // If params is empty, remove the last WHERE
+    if params.is_empty() {
+        for _ in 0..6 {
+            query.pop();
+        }
+    } else {
+        // Remove the last AND
+        for _ in 0..4 {
+            query.pop();
+        }
+    }
 
     // Execute the query
     let rows = sqlx::query_as::<MySql, Reservation>(&query);
