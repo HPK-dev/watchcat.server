@@ -54,7 +54,7 @@ pub async fn main(
 
     // Check if there is a reservation and it is approved
     let rows = sqlx::query_as::<MySql, Reservation>(
-        "SELECT * FROM Reservations WHERE room_id = ? AND approval_pending IS FALSE AND begins >= ? AND ends <= ? ",
+        "SELECT * FROM Reservations WHERE room_id = ? AND approval_pending IS FALSE AND begins <= ? AND ends >= ? ",
     )
     .bind(room_id)
     .bind(current)
