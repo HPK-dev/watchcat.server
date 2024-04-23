@@ -1,6 +1,7 @@
 use crate::database::{AppData, User};
 use actix_web::cookie::time::Duration as CookieDuration;
 use actix_web::{post, web, HttpRequest, HttpResponse};
+use futures_util::TryStreamExt;
 use log::debug;
 use serde::Deserialize;
 use sqlx::MySql;
@@ -38,22 +39,24 @@ pub async fn main(
     let email = payload.email;
     let username = payload.name;
 
-    // Build hash with posted data and current time
-    let mut s = DefaultHasher::new();
-    SystemTime::now().duration_since(UNIX_EPOCH)?.hash(&mut s);
-    item.hash(&mut s);
-    let hashed = s.finish().to_string(); // TODO: Should cached the result
-    let cookie = actix_web::cookie::Cookie::build("user-logged", hashed)
+    // // Build hash with posted data and current time
+    // let mut s = DefaultHasher::new();
+    // SystemTime::now().duration_since(UNIX_EPOCH)?.hash(&mut s);
+    // item.hash(&mut s);
+    // let hashed = s.finish().to_string(); // TODO: Should cached the result
+
+    // Build cookie
+    let cookie = actix_web::cookie::Cookie::build("user-logged", id.clone())
         .max_age(CookieDuration::days(1))
         .finish();
 
-    // Update user sub
-    let rows = sqlx::query_as::<MySql, User>("SELECT * from Users")
-        .fetch_all(&data.db_conn)
-        .await?;
+    // Check if the user is already registered
+    let rows = sqlx::query_as::<MySql, User>("SELECT * from Users WHERE id=?")
+        .bind(id.clone())
+        .fetch(&data.db_conn);
 
     //This user doesn't register yet
-    if !rows.into_iter().any(|v| v.id == id) {
+    if rows.try_collect::<Vec<User>>().await?.is_empty() {
         let _ = sqlx::query("INSERT INTO Users (id, email, name) VALUES (?, ?, ?)")
             .bind(id)
             .bind(email)
