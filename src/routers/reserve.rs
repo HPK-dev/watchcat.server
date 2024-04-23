@@ -104,9 +104,8 @@ pub async fn main_get(
            Reservations.approval_pending
     FROM Reservations
     INNER JOIN Users ON Reservations.user_id=Users.id
-    WHERE 
-"
-    .to_string();
+    WHERE "
+        .to_string();
 
     let mut params: Vec<String> = Vec::new();
 
