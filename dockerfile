@@ -3,7 +3,7 @@ WORKDIR /app/watchcat-server
 
 COPY . .
 
-ENV RUST_LOG info
+ENV RUST_LOG debug
 
 ENTRYPOINT ["cargo", "run"]
 

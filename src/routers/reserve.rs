@@ -136,7 +136,10 @@ pub async fn main_get(
     // Check if the approval_pending is provided
     if let Some(approval_pending) = &info.approval_pending {
         query.push_str("approval_pending=? AND ");
-        params.push(approval_pending.to_string());
+        params.push(match approval_pending {
+            true => "1".to_string(),
+            false => "0".to_string(),
+        });
     }
 
     // If params is empty, remove the last WHERE
@@ -147,7 +150,7 @@ pub async fn main_get(
         query.drain(query.len() - 4..query.len());
     }
 
-    debug!("Query: {:?}", query);
+    debug!("Query: {:#?}", query);
 
     // Execute the query
     let rows = sqlx::query_as::<MySql, GetResponse>(&query);
