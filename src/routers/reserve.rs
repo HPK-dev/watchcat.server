@@ -1,7 +1,7 @@
 use actix_web::{delete, get, patch, put, web, HttpResponse};
 use chrono::NaiveDateTime;
 use futures_util::{StreamExt, TryStreamExt};
-use log::error;
+use log::{debug, error};
 
 use serde::{Deserialize, Serialize};
 use sqlx::MySql;
@@ -147,6 +147,8 @@ pub async fn main_get(
         // Remove the last AND
         query.drain(query.len() - 4..query.len());
     }
+
+    debug!("Query: {:?}", query);
 
     // Execute the query
     let rows = sqlx::query_as::<MySql, GetResponse>(&query);
