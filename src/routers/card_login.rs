@@ -54,7 +54,7 @@ pub async fn main(
     debug!("Current time1: {}", current);
 
     let current: NaiveDateTime = current
-        .checked_sub_signed(chrono::Duration::hours(8))
+        .checked_sub_signed(chrono::Duration::hours(-8))
         .unwrap();
     debug!("Current time2: {}", current);
 
