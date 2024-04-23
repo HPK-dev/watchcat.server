@@ -48,7 +48,7 @@ pub async fn main(
         .finish();
 
     // Update user sub
-    let rows = sqlx::query_as::<MySql, User>("SELECT id, email from Users")
+    let rows = sqlx::query_as::<MySql, User>("SELECT * from Users")
         .fetch_all(&data.db_conn)
         .await?;
 
