@@ -118,6 +118,6 @@ The `Reservations` table stores information about room reservations.
 
 The `Rooms` table stores information about rooms.
 
-- **room_id**: Identifier of the room. It is of type `text` and cannot be null.
-- **device_mac**: MAC address of the device associated with the room. It is of type `char(12)` and serves as the primary key of the table. It cannot be null.
+- **room_id**: Identifier of the room. It is of type `text` and serves as the primary key of the table. It cannot be null.
+- **device_mac**: MAC address of the device associated with the room. It is of type `char(12)` and must be unique. It cannot be null.
 

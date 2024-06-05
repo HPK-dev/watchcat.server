@@ -39,6 +39,8 @@ pub async fn main(
     let email = payload.email;
     let username = payload.name;
 
+    // TODO: Cookie check
+    //
     // // Build hash with posted data and current time
     // let mut s = DefaultHasher::new();
     // SystemTime::now().duration_since(UNIX_EPOCH)?.hash(&mut s);
