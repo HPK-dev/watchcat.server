@@ -104,9 +104,10 @@ pub struct Room {
 // Also, the definition of NaiveDateTime is 'ISO 8601 combined date and time without timezone'.
 //
 // CREATE TABLE Records (
-//   room_id text NOT NULL PRIMARY KEY,
-//   device_mac char(17) NOT NULL UNIQUE
-//   card_id char(8) PRIMARY KEY NOT NULL
+//   record_id INT AUTO_INCREMENT PRIMARY KEY,
+//   room_id text NOT NULL ,
+//   device_mac char(17) NOT NULL,
+//   card_id char(8) NOT NULL,
 //   at DATETIME NOT NULL,
 // )
 #[derive(Deserialize, Serialize, Debug, FromRow)]
