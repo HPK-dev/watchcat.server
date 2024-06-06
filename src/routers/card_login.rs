@@ -1,3 +1,4 @@
+use crate::MethodResponse;
 use actix_web::{get, web, HttpResponse};
 use chrono::NaiveDateTime;
 use futures_util::TryStreamExt;
@@ -5,9 +6,8 @@ use log::debug;
 
 use serde::Deserialize;
 use sqlx::MySql;
-use std::error::Error;
 
-use crate::database::{AppData, Card, Reservation, Room, RE_CARD_ID, RE_MAC};
+use crate::{AppData, Card, Reservation, Room, RE_CARD_ID, RE_MAC};
 
 #[derive(Deserialize, Debug)]
 pub struct Info {
@@ -16,10 +16,7 @@ pub struct Info {
 }
 
 #[get("/card_login")]
-pub async fn main(
-    info: web::Query<Info>,
-    data: web::Data<AppData>,
-) -> Result<HttpResponse, Box<dyn Error>> {
+pub async fn main(info: web::Query<Info>, data: web::Data<AppData>) -> MethodResponse {
     let requested_card = &info.card_id;
     let device_mac = &info.device_mac;
 

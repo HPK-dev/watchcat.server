@@ -1,13 +1,13 @@
+use crate::MethodResponse;
 use actix_web::{delete, get, patch, put, web, HttpResponse};
 use chrono::NaiveDateTime;
 use futures_util::{StreamExt, TryStreamExt};
 use log::{debug, error};
 
 use serde::{Deserialize, Serialize};
-use sqlx::MySql;
-use std::error::Error;
+use sqlx::{FromRow, MySql};
 
-use crate::database::{AppData, Reservation};
+use crate::{AppData, Reservation};
 
 #[derive(Deserialize, Debug)]
 pub struct PutRequest {
@@ -29,7 +29,7 @@ pub struct GetRequest {
     description: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, sqlx::FromRow)]
+#[derive(Serialize, Deserialize, Debug, FromRow)]
 pub struct GetResponse {
     reservation_id: i32,
     room_id: String,
@@ -58,10 +58,7 @@ pub struct DeleteRequest {
 
 // Reserve a room
 #[put("/reserve")]
-pub async fn main_put(
-    info: web::Json<PutRequest>,
-    data: web::Data<AppData>,
-) -> Result<HttpResponse, Box<dyn Error>> {
+pub async fn main_put(info: web::Json<PutRequest>, data: web::Data<AppData>) -> MethodResponse {
     let room_id = &info.room_id;
     let user_id = &info.user_id;
     let description = &info.description;
@@ -90,10 +87,7 @@ pub async fn main_put(
 
 // Return reservations
 #[get("/reserve")]
-pub async fn main_get(
-    info: web::Query<GetRequest>,
-    data: web::Data<AppData>,
-) -> Result<HttpResponse, Box<dyn Error>> {
+pub async fn main_get(info: web::Query<GetRequest>, data: web::Data<AppData>) -> MethodResponse {
     let mut query = "
     SELECT Reservations.reservation_id,
            Reservations.room_id,
@@ -189,10 +183,7 @@ pub async fn main_get(
 
 // Update a reservation
 #[patch("/reserve")]
-pub async fn main_patch(
-    info: web::Json<PatchRequest>,
-    data: web::Data<AppData>,
-) -> Result<HttpResponse, Box<dyn Error>> {
+pub async fn main_patch(info: web::Json<PatchRequest>, data: web::Data<AppData>) -> MethodResponse {
     // Try to get the reservation first
     let mut rows =
         sqlx::query_as::<MySql, Reservation>("SELECT * FROM Reservations WHERE reservation_id=?")
@@ -294,7 +285,7 @@ pub async fn main_patch(
 pub async fn main_delete(
     info: web::Json<DeleteRequest>,
     data: web::Data<AppData>,
-) -> Result<HttpResponse, Box<dyn Error>> {
+) -> MethodResponse {
     sqlx::query("DELETE FROM Reservations WHERE reservation_id=?")
         .bind(info.reservation_id.to_string())
         .execute(&data.db_conn)
@@ -302,3 +293,4 @@ pub async fn main_delete(
 
     Ok(HttpResponse::NoContent().finish())
 }
+

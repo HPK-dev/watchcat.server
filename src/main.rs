@@ -1,17 +1,15 @@
-mod database;
-mod routers;
-
-use crate::database::AppData;
 use actix_cors::Cors;
 use actix_web::middleware::Logger;
 use actix_web::{get, App, HttpServer};
 use actix_web::{web, HttpResponse};
 use env_logger::Env;
 use log::{error, info};
-use routers::{card_login, reserve, token_login};
 use serde::Deserialize;
 use std::env;
 use std::io::Write;
+
+use watchcat_server::routers::{card_login, reserve, token_login};
+use watchcat_server::AppData;
 
 type AnyResult<T = ()> = anyhow::Result<T>;
 
@@ -140,3 +138,4 @@ async fn teapot() -> HttpResponse {
         .content_type("text/html; charset=utf-8")
         .body(include_str!("./../static/teapot.html"))
 }
+

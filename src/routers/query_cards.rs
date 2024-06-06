@@ -1,6 +1,7 @@
-use crate::database::AppData;
-use crate::database::Card;
-use crate::database::RE_USER_ID;
+use crate::AppData;
+use crate::Card;
+use crate::MethodResponse;
+use crate::RE_USER_ID;
 use actix_web::post;
 use actix_web::web;
 use actix_web::HttpResponse;
@@ -9,7 +10,6 @@ use log::debug;
 use serde::Deserialize;
 use serde::Serialize;
 use sqlx::MySql;
-use std::error::Error;
 
 #[derive(Deserialize, Debug)]
 struct Fields {
@@ -22,10 +22,7 @@ struct Resp {
 }
 
 #[post("/fetch_cards")]
-pub async fn main(
-    data: web::Data<AppData>,
-    item: web::Json<Fields>,
-) -> Result<HttpResponse, Box<dyn Error>> {
+pub async fn main(data: web::Data<AppData>, item: web::Json<Fields>) -> MethodResponse {
     if !RE_USER_ID.is_match(&item.user_id) {
         debug!("Invalid user id: {}", &item.user_id);
         return Ok(HttpResponse::BadRequest().into());
@@ -42,3 +39,4 @@ pub async fn main(
 
     Ok(HttpResponse::Ok().json(Resp { cards }))
 }
+

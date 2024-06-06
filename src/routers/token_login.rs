@@ -1,4 +1,5 @@
-use crate::database::{AppData, User};
+use crate::MethodResponse;
+use crate::{AppData, User};
 use actix_web::cookie::time::Duration as CookieDuration;
 use actix_web::{post, web, HttpRequest, HttpResponse};
 use futures_util::TryStreamExt;
@@ -20,7 +21,7 @@ pub async fn main(
     _req: HttpRequest,
     item: web::Json<AccessToken>,
     data: web::Data<AppData>,
-) -> Result<HttpResponse, Box<dyn Error>> {
+) -> MethodResponse {
     let payload = match data
         .google_oauth_client
         .validate_access_token(&item.access_token)
@@ -72,3 +73,4 @@ pub async fn main(
         .cookie(cookie)
         .finish())
 }
+
