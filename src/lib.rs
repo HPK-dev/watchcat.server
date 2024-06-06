@@ -106,15 +106,13 @@ pub struct Room {
 // CREATE TABLE Records (
 //   room_id text NOT NULL PRIMARY KEY,
 //   device_mac char(17) NOT NULL UNIQUE
-//   user_id text NOT NULL,
-//   id char(8) PRIMARY KEY NOT NULL
+//   card_id char(8) PRIMARY KEY NOT NULL
 //   at DATETIME NOT NULL,
 // )
 #[derive(Deserialize, Serialize, Debug, FromRow)]
 pub struct Record {
     room_id: String,
     device_mac: String,
-    user_id: String,
     card_id: String,
     at: NaiveDateTime,
 }

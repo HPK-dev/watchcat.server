@@ -59,7 +59,7 @@ pub async fn main(info: web::Query<Info>, data: web::Data<AppData>) -> MethodRes
     let rows = sqlx::query_as::<MySql, Reservation>(
         "SELECT * FROM Reservations WHERE room_id = ? AND approval_pending IS FALSE AND begins <= ? AND ends >= ? ",
     )
-    .bind(room_id)
+    .bind(&room_id)
     .bind(current)
     .bind(current)
     .fetch(&data.db_conn);
@@ -81,6 +81,16 @@ pub async fn main(info: web::Query<Info>, data: web::Data<AppData>) -> MethodRes
     if rows.try_collect::<Vec<Card>>().await?.is_empty() {
         return Ok(HttpResponse::Forbidden().finish());
     }
+
+    // Approved. Log the record
+    let _ =
+        sqlx::query("INSERT INTO Records (room_id, device_mac, card_id, at) VALUES (?, ?, ?, ?)")
+            .bind(room_id)
+            .bind(device_mac)
+            .bind(requested_card)
+            .bind(current)
+            .execute(&data.db_conn)
+            .await?;
 
     Ok(HttpResponse::Ok().finish())
 }
