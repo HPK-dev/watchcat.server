@@ -1,4 +1,5 @@
 use actix_web::{get, web, HttpResponse};
+use chrono::NaiveDateTime;
 use futures_util::StreamExt;
 use log::{debug, error};
 use serde::{Deserialize, Serialize};
@@ -19,9 +20,9 @@ pub struct GetRequest {
 #[derive(Serialize, Deserialize, Debug, FromRow)]
 pub struct GetResponse {
     room_id: String,
-    derive_mac: String,
+    device_mac: String,
     card_id: String,
-    at: String,
+    at: NaiveDateTime,
     username: String,
     user_id: String,
 }
@@ -32,11 +33,14 @@ pub async fn main_get(info: web::Query<GetRequest>, data: web::Data<AppData>) ->
     SELECT Records.room_id,
            Records.device_mac,
            Records.card_id,
-           Records.at
+           Records.at,
            Users.id AS user_id,
            Users.name AS username
-    FROM Reservations
-    INNER JOIN Users ON Reservations.user_id=Users.id
+    FROM Records
+    INNER JOIN 
+        Cards ON Records.card_id = Cards.id
+    INNER JOIN 
+        Users ON Cards.owner = Users.id
     WHERE "
         .to_string();
 

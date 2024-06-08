@@ -34,7 +34,7 @@ pub struct GetResponse {
     reservation_id: i32,
     room_id: String,
     username: String,
-    user_id:String,
+    user_id: String,
     description: Option<String>,
     begins: NaiveDateTime,
     ends: NaiveDateTime,
@@ -295,4 +295,3 @@ pub async fn main_delete(
 
     Ok(HttpResponse::NoContent().finish())
 }
-
