@@ -102,6 +102,18 @@
   Retrieves card records from the database based on the provided filters.  
   Returns `200 OK` a JSON array of reservation objects matching the specified criteria.
 
+---
+
+### `/console_login` **POST**
+
+- **Arguments:**
+  - `username` (String)
+  - `password` (String)
+- **Description:**  
+  **ONLY OPEN THIS API ON THE SAME SERVER AS YOUR CONTROL PANEL IN YOUR REVERSE PROXY**  
+  Verifies the username and password provided by the control panel.  
+  Returns `200 OK` if the provided username and password match the data in the admin table.
+
 ## Database Schema
 
 ### Users Table
@@ -156,3 +168,12 @@ The `Records` table stores information about card swipes.
 - **device_mac** `char(17)` `NOT NULL`: MAC address of the device where the card was swiped.
 - **card_id** `char(8)` `NOT NULL`: Identifier of the card that was swiped.
 - **at** `DATETIME` `NOT NULL`: Date and time when the card was swiped.
+
+---
+
+### Admins Table
+
+The `Admins` table stores information about admins.
+
+- **username** `text` `NOT NULL`: Username of the admin.
+- **password** `text` `NOT NULL`: Password of the admin.
