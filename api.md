@@ -175,5 +175,6 @@ The `Records` table stores information about card swipes.
 
 The `Admins` table stores information about admins.
 
+- **user_id** `INT` `AUTO_INCREMENT` `PRIMARY KEY`: Unique id.
 - **username** `text` `NOT NULL`: Username of the admin.
 - **password** `text` `NOT NULL`: Password of the admin.

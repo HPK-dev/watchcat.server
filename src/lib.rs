@@ -112,8 +112,21 @@ pub struct Room {
 // )
 #[derive(Deserialize, Serialize, Debug, FromRow)]
 pub struct Record {
+    record_id: i32,
     room_id: String,
     device_mac: String,
     card_id: String,
     at: NaiveDateTime,
+}
+
+// CREATE TABLE Admins (
+//   user_id INT AUTO_INCREMENT PRIMARY KEY,
+//   username text NOT NULL,
+//   password text NOT NULL,
+// )
+#[derive(Deserialize, Serialize, Debug, FromRow)]
+pub struct Admin {
+    user_id: i32,
+    username: String,
+    password: String,
 }

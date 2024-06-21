@@ -9,7 +9,7 @@ repository = "https://github.com/HPK-dev/watchcat.server"
 [dependencies]
 # database
 sqlx = { version = "0.7", features = ["runtime-tokio", "chrono", "mysql"] }
-chrono = { vesion = "0.4.33", features = ["serde"] }
+chrono = { version = "0.4.38", features = ["serde"] }
 
 # logging
 env_logger = { version = "0.11.1", features = ["color"] }

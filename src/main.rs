@@ -8,7 +8,7 @@ use serde::Deserialize;
 use std::env;
 use std::io::Write;
 
-use watchcat_server::routers::{card_login, reserve, room_status, token_login};
+use watchcat_server::routers::{card_login, console, reserve, room_status, token_login};
 use watchcat_server::AppData;
 
 type AnyResult<T = ()> = anyhow::Result<T>;
@@ -111,6 +111,7 @@ pub async fn main() -> AnyResult {
             .service(reserve::main_patch)
             .service(reserve::main_delete)
             .service(room_status::main_get)
+            .service(console::login)
     })
     .bind((bind_ip, bind_port))?;
     server.run().await?;
