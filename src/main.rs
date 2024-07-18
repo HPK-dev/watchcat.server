@@ -3,7 +3,7 @@ use actix_web::middleware::Logger;
 use actix_web::{get, App, HttpServer};
 use actix_web::{web, HttpResponse};
 use env_logger::Env;
-use log::{error, info};
+use log::info;
 use serde::Deserialize;
 use std::env;
 use std::io::Write;
@@ -13,7 +13,7 @@ use watchcat_server::AppData;
 
 type AnyResult<T = ()> = anyhow::Result<T>;
 
-fn check_needed_env() -> AnyResult {
+fn check_needed_env() {
     const REQUIRED_ENV_FIELD: [&str; 4] = [
         "BIND_IP",
         "BIND_PORT",
@@ -36,21 +36,17 @@ fn check_needed_env() -> AnyResult {
     }
 
     if !missing.is_empty() {
-        error!("Some env var are missing!");
+        eprintln!("Some env var are missing!");
         for val in missing {
-            error!("    {:?}", val);
+            eprintln!("    {:?}", val);
         }
 
-        return Err(anyhow::anyhow!("missing env vars"));
+        panic!("missing env vars");
     }
-
-    println!();
-
-    Ok(())
 }
 
 #[actix_web::main]
-pub async fn main() -> AnyResult {
+pub async fn main() {
     #[cfg(debug_assertions)]
     let mut builder = env_logger::Builder::from_env(Env::default().default_filter_or("debug"));
     #[cfg(not(debug_assertions))]
@@ -75,12 +71,13 @@ pub async fn main() -> AnyResult {
 
     builder.init();
 
-    dotenvy::dotenv()?;
+    // Try to load `.env` file
+    let _ = dotenvy::dotenv();
 
-    check_needed_env()?;
+    check_needed_env();
 
-    let bind_ip = env::var("BIND_IP")?;
-    let bind_port: u16 = env::var("BIND_PORT")?.parse()?;
+    let bind_ip = env::var("BIND_IP").unwrap();
+    let bind_port: u16 = env::var("BIND_PORT").unwrap().parse().unwrap();
 
     let app_data = web::Data::new(AppData::new().await);
 
@@ -113,10 +110,9 @@ pub async fn main() -> AnyResult {
             .service(room_status::main_get)
             .service(console::login)
     })
-    .bind((bind_ip, bind_port))?;
-    server.run().await?;
-
-    Ok(())
+    .bind((bind_ip, bind_port))
+    .unwrap();
+    server.run().await.unwrap();
 }
 
 #[get("/")]
